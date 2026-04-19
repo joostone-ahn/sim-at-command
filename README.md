@@ -35,7 +35,7 @@ Double-click `run.bat`.
 
 Browser opens automatically at `http://127.0.0.1:8083`.
 
-1. **Select serial port** — modem port is auto-detected (Samsung/Android)
+1. **Select serial port** — modem port is auto-detected (Samsung/Android priority)
 2. **Connect** — establishes serial connection and verifies AT+CRSM support
 3. **Browse SIM files** — 3GPP standard file tree (MF, ADF.USIM, ADF.ISIM)
 4. **Click any file** — reads and displays raw hex + decoded data
@@ -44,21 +44,34 @@ Browser opens automatically at `http://127.0.0.1:8083`.
 
 ---
 
-## Features
+## What It Does
 
-- **AT+CRSM** based SIM file read/write (transparent, linear fixed, cyclic)
-- **AT+CSIM** based BER-TLV operations (URSP read/write via RETRIEVE DATA / SET DATA)
-- **Auto-detection** of serial modem port
-- **3GPP standard file list** — 123 EFs from TS 31.102, TS 102.221
-- **Decoded data display** — pySim-based decoders for IMSI, ICCID, SPN, PLMN, UST, and more
-- **PLMN table view** — MCC/MNC/AcT decoded table for PLMNwAcT, OPLMNwAcT, HPLMNwAcT, FPLMN, EHPLMN
-- **Service table view** — UST/IST/EST with service name and True/False status
-- **ACC table view** — Access Control Class bit-level display
-- **URSP tree view** — 3GPP TS 24.526 based URSP rule decoding with tree structure
-- **Write popup** — hex editor with structure-aware UI (service table toggles, PLMN editor, BER-TLV tag editor)
-- **ADM1 verification** — ADM1 key authentication via AT+CSIM for write access
+### SIM File Access
+- Read/write SIM files via **AT+CRSM** (transparent, linear fixed, cyclic)
+- BER-TLV file operations via **AT+CSIM** (RETRIEVE DATA / SET DATA)
+- **123 EFs** from 3GPP TS 31.102 (USIM) and TS 102.221 (MF)
 
 > **Note:** ADF.ISIM files are currently excluded. AT+CRSM cannot distinguish ISIM FIDs from USIM (they overlap), and AT+CSIM SELECT by AID is not supported on some modems. ISIM support may be added in a future update.
+
+### Decoded Views
+- **Table view**
+  - PLMN files (PLMNwAcT, OPLMNwAcT, HPLMNwAcT, FPLMN, EHPLMN) — MCC / MNC / AcT columns
+  - Service tables (UST, IST, EST) — service name and True/False status
+  - Access Control Class (ACC) — bit-level class display
+- **Tree view** — URSP rules (3GPP TS 24.526) with hierarchical TD/RSD structure
+- **JSON view** — All other EFs decoded via pySim decoders (IMSI, ICCID, SPN, AD, etc.)
+- **Raw hex** — Always available for every file
+
+### Write Operations
+- **Hex editor** — Direct hex input for any writable EF
+- **Table editor** — PLMN list with MCC/MNC/AcT fields, Table/Hex mode toggle
+- **Service table editor** — True/False toggles per service, Table/Hex mode toggle
+- **ACC editor** — True/False toggles per access class
+- **BER-TLV editor** — Tag-based write with TLV validation (URSP etc.)
+
+> **Note:** ADM1 key verification is required before writing. The following files are exceptions that can be written without ADM1:
+> - EF.FPLMN
+> - EF.OPLMNwAcT
 
 ---
 
