@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIM AT Command Tool</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;color:#333;display:flex;flex-direction:column;overflow:hidden;height:100vh}
+.container{max-width:100%;padding:10px 12px 0 12px;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.mono{font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
+.header{background:rgba(255,255,255,0.95);border-radius:10px;padding:10px 20px;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:16px}
+.header h1{font-size:1.2rem;color:#2c3e50;font-weight:700;white-space:nowrap}
+.step-bar{display:flex;gap:6px;align-items:center}
+.step{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;font-size:0.72rem;font-weight:600;transition:all 0.3s}
+.step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700}
+.step-inactive{background:#f0f0f0;color:#aaa}.step-inactive .step-num{background:#ddd;color:#aaa}
+.step-active{background:linear-gradient(45deg,#667eea,#764ba2);color:white}.step-active .step-num{background:rgba(255,255,255,0.3);color:white}
+.step-done{background:#d4edda;color:#155724}.step-done .step-num{background:#27ae60;color:white}
+.step-arrow{color:#ccc;font-size:0.8rem}
+.btn{padding:5px 14px;border:none;border-radius:6px;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:4px;text-align:center}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-primary{background:linear-gradient(45deg,#667eea,#764ba2);color:white}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 2px 8px rgba(102,126,234,0.4)}
+.btn-success{background:linear-gradient(45deg,#27ae60,#2ecc71);color:white}.btn-success:hover:not(:disabled){transform:translateY(-1px)}
+.btn-danger{background:linear-gradient(45deg,#e74c3c,#c0392b);color:white}
+.btn-dark{background:#f0f2f5;color:#555;border:1px solid #ddd}.btn-dark:hover:not(:disabled){background:#e8eaed}
+.btn-warning{background:linear-gradient(45deg,#e67e22,#f39c12);color:white}.btn-warning:hover:not(:disabled){transform:translateY(-1px)}
+.input-sm{padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:0.76rem;font-family:'Menlo',monospace}
+.input-sm:focus{outline:none;border-color:#667eea}
+select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
+.status-badge{font-size:0.72rem;padding:3px 8px;border-radius:4px;font-weight:600}
+.status-ok{background:#d4edda;color:#155724}.status-err{background:#f8d7da;color:#721c24}.status-warn{background:#fff3cd;color:#856404}
+.setup-panel{background:rgba(255,255,255,0.95);border-radius:10px;padding:14px 18px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.setup-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}.setup-row:last-child{margin-bottom:0}
+.setup-label{font-size:0.74rem;font-weight:600;color:#888;min-width:80px}
+.guide-box{background:#f0f4ff;border:1px solid #d0d8f0;border-radius:8px;padding:10px 14px;font-size:0.72rem;line-height:1.7;color:#555}
+.guide-box b{color:#667eea}
+.guide-box code{background:#e8ecf4;padding:1px 5px;border-radius:3px;font-family:Menlo,monospace;font-size:0.7rem;color:#764ba2}
+.main-content{flex:1;display:flex;gap:8px;min-height:0;overflow:hidden}
+.card{background:rgba(255,255,255,0.95);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;flex-direction:column;overflow:hidden}
+.panel-title{background:linear-gradient(45deg,#667eea,#764ba2);color:white;padding:8px 14px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.panel-title .count{font-size:0.68rem;font-weight:400;opacity:0.8;margin-left:4px}
+.file-tree{flex:1;overflow-y:auto;padding:2px 0}
+.file-tree::-webkit-scrollbar{width:6px}.file-tree::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+.tree-group{margin-bottom:1px}
+.tree-group-header{padding:5px 12px;font-size:0.72rem;font-weight:700;color:#667eea;background:#f0f4ff;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+.tree-group-header:hover{background:#e8ecf8}
+.tree-group-arrow{font-size:0.6rem;transition:transform 0.2s;width:12px;text-align:center;color:#999}
+.tree-group-arrow.open{transform:rotate(90deg)}
+.tree-item{padding:3px 12px 3px 28px;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:2px solid transparent;font-family:Menlo,monospace}
+.tree-item:hover{background:#f5f7ff}
+.tree-item.selected{background:#eef2ff;border-left-color:#667eea;font-weight:600}
+.tree-item.df-item{color:#764ba2;font-weight:600;padding-left:20px;font-family:'Segoe UI',sans-serif}
+.tree-item .fid{color:#aaa;font-size:0.66rem;min-width:36px}
+.tree-item .fname{flex:1;color:#333}
+.tree-item .ftype{color:#bbb;font-size:0.64rem;min-width:24px;text-align:right}
+.tree-item .read-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tree-item .read-dot.unread{background:#ddd}.tree-item .read-dot.read-ok{background:#27ae60}.tree-item .read-dot.read-err{background:#e74c3c}
+.search-box{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid #eee;background:#f0f2f5}
+.search-box input{flex:1;border:none;background:transparent;color:#333;font-size:0.74rem;font-family:Menlo,monospace;outline:none}
+.search-box input::placeholder{color:#bbb}
+.detail-empty{display:flex;align-items:center;justify-content:center;flex:1;color:#bbb;font-size:0.8rem}
+.detail-content{flex:1;overflow-y:auto;padding:12px}
+.detail-content::-webkit-scrollbar{width:6px}.detail-content::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+.detail-section{margin-bottom:12px;background:#fff;border:1px solid #e9ecef;border-radius:8px;overflow:hidden}
+.detail-section-title{font-size:0.80rem;font-weight:700;color:#667eea;padding:8px 12px;background:#f8f9ff;border-bottom:1px solid #e9ecef;margin-bottom:0}
+.detail-meta{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.74rem;padding:10px 12px}
+.detail-meta dt{color:#888;font-weight:600}.detail-meta dd{color:#333;font-family:Menlo,monospace}
+.hex-display{background:#fff;font-family:Menlo,monospace;font-size:0.74rem;color:#2c3e50;word-break:break-all;line-height:1.5;white-space:pre-wrap;max-height:200px;overflow-y:auto;padding:10px 12px;border:none;border-radius:0}
+.rec-table{width:100%;border-collapse:collapse;font-size:0.74rem}
+.rec-table th{background:#f0f4ff;color:#667eea;padding:4px 8px;text-align:left;font-weight:600;position:sticky;top:0;border-bottom:1px solid #e0e0e0;z-index:1}
+.rec-table th:first-child{text-align:center;width:38px}
+.rec-table td{padding:3px 8px;border-bottom:1px solid #f0f0f0;font-family:Menlo,monospace;color:#333}
+.rec-table td:first-child{color:#667eea;font-weight:600;width:38px;text-align:center}
+.rec-table th:not(:first-child),.rec-table td:not(:first-child){padding-left:6px;padding-right:12px}
+.resizer{width:6px;cursor:col-resize;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.resizer-bar{width:2px;height:40px;background:rgba(255,255,255,0.3);border-radius:1px}
+.footer{height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.footer span{font-size:0.66rem;color:rgba(255,255,255,0.5)}
+.overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100;justify-content:center;align-items:center}
+.overlay.show{display:flex}
+.popup{background:white;border-radius:12px;width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.popup-header{padding:12px 16px;background:linear-gradient(45deg,#667eea,#764ba2);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between}
+.popup-header h3{font-size:0.85rem;color:white}
+.popup-close{background:none;border:none;color:rgba(255,255,255,0.8);font-size:1.1rem;cursor:pointer}
+.popup-body{padding:16px}
+.json-hl{margin:0;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;white-space:pre;line-height:1.4}
+.json-key{color:#881391}.json-string{color:#0451a5}.json-number{color:#098658}.json-boolean{color:#0000ff}.json-null{color:#808080}
+.svc-mode-active{background:#667eea!important;color:white!important;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📡 SIM AT Command Tool</h1>
+        <div class="step-bar">
+            <div class="step step-active" id="step1"><span class="step-num">1</span> Connect</div>
+            <span class="step-arrow">›</span>
+            <div class="step step-inactive" id="step2"><span class="step-num">2</span> SIM Files</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        </div>
+    </div>
+    <div class="setup-panel" id="setupPanel">
+        <div class="guide-box" style="margin-bottom:10px">
+            <b>📋 Before you start:</b> Enable <code>DM port</code> in your Android device's USB settings.
+        </div>
+        <div class="setup-row">
+            <span class="setup-label">Serial Port</span>
+            <select id="portSelect" class="input-sm" style="min-width:300px"></select>
+            <button class="btn btn-dark" onclick="refreshPorts()">🔄 Refresh</button>
+            <button class="btn btn-primary" id="btnConnect" onclick="doConnect()">🔌 Connect</button>
+            <button class="btn btn-danger" id="btnDisconnect" onclick="doDisconnect()" style="display:none">⏏ Disconnect</button>
+            <span id="connectStatus" class="status-badge" style="display:none"></span>
+        </div>
+    </div>
+    <div class="card" style="padding:12px;margin-bottom:0;flex:1;display:flex;flex-direction:column;min-height:0">
+    <div class="main-content" id="mainContent" style="display:none">
+        <div class="card" id="leftPanel" style="flex:3;min-width:220px">
+            <div class="panel-title"><span>🗂️ SIM Files</span><span class="count" id="fileCount"></span></div>
+            <div class="search-box"><span style="color:#bbb">🔍</span><input type="text" id="searchInput" placeholder="Search by name or FID..." oninput="filterTree();toggleSearchClear()"><span id="searchClear" onclick="clearSearch()" style="display:none;color:#999;cursor:pointer;font-size:0.9rem;line-height:1;padding:0 2px;user-select:none">✕</span></div>
+            <div class="file-tree" id="fileTree"></div>
+        </div>
+        <div class="resizer" id="resizer"><div class="resizer-bar"></div></div>
+        <div class="card" id="midPanel" style="flex:7;min-width:300px">
+            <div class="panel-title">
+                <span>📄 File Contents</span>
+                <span id="detailFileName" style="font-weight:400;font-size:0.74rem;opacity:0.9;margin-left:4px"></span>
+                <div style="margin-left:auto;display:flex;gap:6px">
+                    <button class="btn btn-dark" id="btnAdm" onclick="openAdmPopup()" style="display:none;background:rgba(255,255,255,0.2);color:white;border:none;justify-content:center">🔐 ADM</button>
+                    <button class="btn btn-dark" id="btnWrite" onclick="openWriteMode()" style="display:none;background:rgba(255,255,255,0.2);color:white;border:none;justify-content:center" disabled>✏️ Write</button>
+                </div>
+            </div>
+            <div class="detail-empty" id="detailEmpty">← Select a file</div>
+            <div class="detail-content" id="detailContent" style="display:none"></div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- ADM Verify Popup -->
+<div id="admOverlay" class="overlay" onclick="if(event.target===this)closeAdmPopup()">
+<div class="popup" style="width:420px">
+    <div class="panel-title" style="border-radius:12px 12px 0 0">
+        <span>🔐 ADM Verification</span>
+        <button onclick="closeAdmPopup()" style="margin-left:auto;background:none;border:none;color:white;font-size:1.1rem;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:0.72rem;color:#888">ℹ️ Get ADM1 key from your IT admin with SIM ICCID</div>
+        <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:6px 10px">
+            <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM1</span>
+            <input type="text" id="admInput" placeholder="16-digit hex" oninput="updateAdmBtn()" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+            <span id="admCount" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-primary" id="btnAdmVerify" onclick="doAdmVerify()" disabled style="padding:4px 14px;font-size:0.72rem;min-width:80px">Verify</button>
+            <span id="admStatus" style="font-size:0.72rem"></span>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Write Popup -->
+<div id="writeOverlay" class="overlay" onclick="if(event.target===this)closeWritePopup()">
+<div class="popup" style="width:640px;height:70vh;display:flex;flex-direction:column;min-width:400px">
+    <div class="panel-title" style="border-radius:12px 12px 0 0">
+        <span>✏️ Write EF</span>
+        <span id="writeEfName" style="margin-left:8px;font-weight:400;font-size:0.78rem;opacity:0.9"></span>
+        <button onclick="closeWritePopup()" style="margin-left:auto;background:none;border:none;color:white;font-size:1.1rem;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:hidden">
+        <div id="writeRecordRow" style="display:none">
+            <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Record Number</div>
+            <select id="writeRecordSelect" onchange="onWriteRecordChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Consolas,monospace"></select>
+        </div>
+        <div id="writeServiceTable" style="display:none;flex-direction:column;min-height:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:0.76rem;font-weight:600;color:#555">Service Table</span>
+                <div style="margin-left:auto;display:flex;background:#e9ecef;border-radius:4px;cursor:pointer;overflow:hidden">
+                    <span class="svc-mode-label svc-mode-active" id="svcModeTable" onclick="switchSvcMode('table')" style="padding:3px 10px;font-size:0.66rem;font-weight:600;color:#888;user-select:none">Table</span>
+                    <span class="svc-mode-label" id="svcModeHex" onclick="switchSvcMode('hex')" style="padding:3px 10px;font-size:0.66rem;font-weight:600;color:#888;user-select:none">Hex</span>
+                </div>
+            </div>
+            <div id="writeServiceList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
+            <div id="writeServiceHex" style="display:none;flex:1">
+                <textarea id="writeServiceHexInput" rows="6" oninput="onServiceHexInput()" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+            </div>
+        </div>
+        <div id="writePlmnSection" style="display:none;flex-direction:column;min-height:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:0.76rem;font-weight:600;color:#555">PLMN List</span>
+                <div style="margin-left:auto;display:flex;background:#e9ecef;border-radius:4px;cursor:pointer;overflow:hidden">
+                    <span class="svc-mode-label svc-mode-active" id="plmnModeTable" onclick="switchPlmnMode('table')" style="padding:3px 10px;font-size:0.66rem;font-weight:600;color:#888;user-select:none">Table</span>
+                    <span class="svc-mode-label" id="plmnModeHex" onclick="switchPlmnMode('hex')" style="padding:3px 10px;font-size:0.66rem;font-weight:600;color:#888;user-select:none">Hex</span>
+                </div>
+            </div>
+            <div id="writePlmnList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
+            <div id="writePlmnHex" style="display:none;flex:1">
+                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput()" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+            </div>
+        </div>
+        <div id="writeAccSection" style="display:none">
+            <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Access Control Class</div>
+            <div id="writeAccList" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.74rem"></div>
+        </div>
+        <div id="writeHexRow" style="flex:1;display:flex;flex-direction:column">
+            <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span id="writeEfSize" style="font-weight:400;color:#888"></span></div>
+            <div style="position:relative;flex:1">
+                <textarea id="writeHexInput" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box" oninput="checkWriteChanged()"></textarea>
+                <span id="writeHexCount" style="position:absolute;right:10px;bottom:8px;font-size:0.66rem;color:#bbb"></span>
+            </div>
+        </div>
+        <div id="writeTlvSection" style="display:none">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                <span style="font-size:0.76rem;font-weight:600;color:#555">Tag</span>
+                <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Consolas,monospace"></select>
+            </div>
+            <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span style="font-weight:400;color:#aaa;font-size:0.68rem">— Full TLV format: tag (80) + BER length + value</span></div>
+            <textarea id="writeTlvHexInput" rows="8" oninput="checkTlvChanged()" style="width:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical"></textarea>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                <button class="btn btn-primary" id="writeTlvWriteBtn" onclick="tlvWrite()" disabled style="padding:4px 10px;font-size:0.72rem;font-weight:600;min-width:80px">✏️ Write</button>
+                <span id="writeTlvStatus" style="font-size:0.72rem"></span>
+                <span style="margin-left:auto">
+                    <button class="btn btn-dark" id="writeTlvRestoreBtn" onclick="tlvRestore()" disabled>↩ Restore</button>
+                </span>
+            </div>
+            <div style="margin-top:12px;padding:8px 10px;background:#f8f9fa;border-radius:6px;font-size:0.70rem;color:#666">
+                <span style="font-weight:600">Note:</span> Use URSP Rule Analyzer to encode/decode URSP rule hex values.<br>
+                <a href="https://huggingface.co/spaces/Joostone/ursp-rule-analyzer" target="_blank" style="color:#667eea">🔗 https://huggingface.co/spaces/Joostone/ursp-rule-analyzer</a>
+            </div>
+        </div>
+        <div id="writeButtonRow" style="display:flex;align-items:center;margin-top:4px">
+            <span style="display:flex;align-items:center;gap:6px">
+                <button class="btn btn-primary" id="writeSubmitBtn" onclick="submitWrite()" disabled style="padding:4px 10px;font-size:0.72rem;font-weight:600;min-width:80px">✏️ Write</button>
+                <span id="writeStatus" style="font-size:0.72rem"></span>
+            </span>
+            <span style="margin-left:auto">
+                <button class="btn btn-dark" id="writeRestoreBtn" onclick="restoreOrigHex()" disabled>↩ Restore</button>
+            </span>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="footer"><span>Copyright © 2026 JUSEOK AHN &lt;ajs3013@lguplus.co.kr&gt; All rights reserved.</span></div>
+<script>
+let currentStep=1,selectedFile=null,readCache={},admVerified=false,verifiedAdm='',verifiedAdmType='',writeOrigHex='',writeExpectedSize=0,allFiles=[];
+let writeServiceMap=null,writeServiceOrig={},tlvTagData={},tlvOrigHex='',verifyCallback=null;
+const NO_ADM_FILES=['EF.FPLMN','EF.OPLMNwAcT'];
+const ISIM_WRITE_BLOCKED=true;  // AT+CRSM cannot distinguish ISIM FIDs from USIM — write is unsafe
+const PLMN_FILES_WITH_ACT=['EF.PLMNwAcT','EF.OPLMNwAcT','EF.HPLMNwAcT'];
+const PLMN_FILES_NO_ACT=['EF.FPLMN','EF.EHPLMN'];
+function isPlmnFile(name){return PLMN_FILES_WITH_ACT.includes(name)||PLMN_FILES_NO_ACT.includes(name);}
+function isUrspFile(path){return path&&path.indexOf('EF.URSP')>=0;}
+function renderValueTree(val,prefix,cont){
+    var lines=[];
+    if(Array.isArray(val)){for(var i=0;i<val.length;i++){var p=i<val.length-1?'├─ ':'└─ ';lines.push(prefix+cont+'   '+p+val[i]);}}
+    else if(val&&typeof val==='object'){var items=Object.keys(val);for(var i=0;i<items.length;i++){var p=i<items.length-1?'├─ ':'└─ ';lines.push(prefix+cont+'   '+p+items[i]+' = '+val[items[i]]);}}
+    return lines;
+}
+function formatUrspTree(decoded){
+    if(!decoded||!decoded['URSP rules'])return'';
+    var result=['URSP Rules'];var rules=decoded['URSP rules'];
+    for(var ri=0;ri<rules.length;ri++){
+        var rule=rules[ri],pv=rule['Precedence value'];
+        var rp=ri<rules.length-1?'├─ ':'└─ ',rc=ri<rules.length-1?'│ ':'  ';
+        result.push(rp+'URSP_'+ri);result.push(rc+'├─ Precedence Value = '+pv);
+        var tdList=rule['Traffic descriptor'];
+        var isMatchAll=tdList.length===1&&tdList[0].type==='Match-all';
+        if(!tdList.length||isMatchAll){result.push(rc+'├─ Traffic Descriptor = Match-all');}
+        else{result.push(rc+'├─ Traffic Descriptor');
+            for(var ti=0;ti<tdList.length;ti++){var td=tdList[ti],tp=ti<tdList.length-1?'├─ ':'└─ ',tc=ti<tdList.length-1?'│ ':'  ';var tv=td.value;
+                if(td.type==='Match-all'){result.push(rc+'│ '+tp+td.type);}
+                else if(tv&&typeof tv==='object'){result.push(rc+'│ '+tp+td.type);result=result.concat(renderValueTree(tv,rc+'│ ',tc));}
+                else{result.push(rc+'│ '+tp+td.type+' = '+tv);}}}
+        var rsdList=rule['Route selection descriptor list'];
+        result.push(rc+'└─ Route selection descriptor list');
+        for(var si=0;si<rsdList.length;si++){var rsd=rsdList[si],sp=si<rsdList.length-1?'├─ ':'└─ ',sc=si<rsdList.length-1?'│ ':'  ';
+            var conts=rsd['Route selection descriptor contents'];
+            result.push(rc+'   '+sp+'RSD_'+si);result.push(rc+'   '+sc+'├─ Precedence value = '+rsd['Precedence value']);
+            result.push(rc+'   '+sc+'└─ Route selection descriptor contents');
+            for(var ci=0;ci<conts.length;ci++){var comp=conts[ci],cp=ci<conts.length-1?'├─ ':'└─ ',cc=ci<conts.length-1?'│ ':'  ';var cv=comp.value;
+                if(cv===undefined||cv===null){result.push(rc+'   '+sc+'   '+cp+comp.type);}
+                else if(cv&&typeof cv==='object'){result.push(rc+'   '+sc+'   '+cp+comp.type);var items=Object.keys(cv);for(var vi=0;vi<items.length;vi++){var vp=vi<items.length-1?'├─ ':'└─ ';result.push(rc+'   '+sc+'   '+cc+'  '+vp+items[vi]+' = '+cv[items[vi]]);}}
+                else{result.push(rc+'   '+sc+'   '+cp+comp.type+' = '+cv);}}}
+    }
+    return result.join('\n');
+}
+function hasAcT(name){return PLMN_FILES_WITH_ACT.includes(name);}
+function decodePlmn(hex6){
+    if(!hex6||hex6.length<6||hex6==='FFFFFF')return null;
+    const h=hex6.toUpperCase();
+    const mcc=h[1]+h[0]+h[3];
+    const mnc3=h[2];const mnc=h[5]+h[4]+(mnc3!=='F'?mnc3:'');
+    return{mcc,mnc};
+}
+function encodePlmn(mcc,mnc){
+    if(!mcc||mcc.length!==3)return'FFFFFF';
+    const m=mcc.split(''),n=mnc.split('');
+    const b0=m[1]+m[0];
+    const b1=(n.length===3?n[2]:' F'[1])+m[2];
+    const b2=n[1]+n[0];
+    return(b0+b1+b2).toUpperCase();
+}
+function parsePlmnList(hex,withAcT){
+    const step=withAcT?10:6;const list=[];
+    for(let i=0;i+step<=hex.length;i+=step){
+        const plmnHex=hex.substr(i,6);
+        const p=decodePlmn(plmnHex);
+        if(!p){list.push({mcc:'',mnc:'',act:'',empty:true,raw:hex.substr(i,step)});continue;}
+        const act=withAcT?hex.substr(i+6,4):'';
+        list.push({mcc:p.mcc,mnc:p.mnc,act,empty:false,raw:hex.substr(i,step)});
+    }
+    return list;
+}
+function renderPlmnTable(name,hex){
+    const withAcT=hasAcT(name);
+    const entries=parsePlmnList(hex,withAcT);
+    let h='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">🔍 Decoded Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div><div class="card-copyable" style="padding:8px 12px">';
+    h+='<table class="rec-table" style="width:auto"><thead><tr><th>#</th><th>MCC</th><th>MNC</th>';
+    if(withAcT)h+='<th>AcT</th>';
+    h+='</tr></thead><tbody>';
+    entries.forEach((e,i)=>{
+        if(e.empty){h+=`<tr style="color:#ccc"><td>${i+1}</td><td>-</td><td>-</td>${withAcT?'<td>-</td>':''}</tr>`;}
+        else{h+=`<tr><td>${i+1}</td><td>${e.mcc}</td><td>${e.mnc}</td>${withAcT?`<td>${e.act}</td>`:''}</tr>`;}
+    });
+    h+='</tbody></table></div></div>';
+    return h;
+}
+const ACC_CLASSES={0:'Class 0',1:'Class 1',2:'Class 2',3:'Class 3',4:'Class 4',5:'Class 5',6:'Class 6',7:'Class 7',8:'Class 8',9:'Class 9',10:'Class 11 (HPLMN)',11:'Class 12 (Security)',12:'Class 13 (Public Utility)',13:'Class 14 (Emergency)',14:'Class 15 (PLMN operator)',15:'Class 15 (PLMN staff)'};
+function parseAccBits(hex){
+    if(!hex||hex.length<4)return{};
+    const val=parseInt(hex.substring(0,4),16);
+    const bits={};
+    for(let i=0;i<16;i++)bits[i]=!!(val&(1<<i));
+    return bits;
+}
+function accBitsToHex(bits){
+    let val=0;
+    for(let i=0;i<16;i++)if(bits[i])val|=(1<<i);
+    return ('0000'+val.toString(16)).slice(-4).toUpperCase();
+}
+function renderAccTable(hex){
+    const bits=parseAccBits(hex);
+    let h='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">🔍 Decoded Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div><div class="card-copyable" style="padding:8px 12px">';
+    h+='<table class="rec-table" style="width:auto"><thead><tr><th>#</th><th>Class</th><th>Status</th></tr></thead><tbody>';
+    for(let i=0;i<16;i++){
+        const label=ACC_CLASSES[i]||('Class '+i);
+        const on=!!bits[i];
+        const color=on?'#27ae60':'#ccc';
+        h+=`<tr><td>${i}</td><td style="font-family:'Segoe UI',sans-serif">${label}</td><td style="color:${color};font-weight:600">${on?'True':'False'}</td></tr>`;
+    }
+    h+='</tbody></table></div></div>';
+    return h;
+}
+let plmnOrigEntries=[];
+function renderPlmnEditor(){
+    const f=selectedFile,r=readCache[f.path];if(!r||!r.data)return;
+    const withAcT=hasAcT(f.name);
+    const entries=parsePlmnList(r.data,withAcT);
+    plmnOrigEntries=JSON.parse(JSON.stringify(entries));
+    let html='<table style="width:auto;border-collapse:collapse"><thead><tr><th style="width:36px;padding:3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">#</th><th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">MCC</th><th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">MNC</th>';
+    if(withAcT)html+='<th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">AcT</th>';
+    html+='</tr></thead><tbody>';
+    entries.forEach((e,i)=>{
+        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:Consolas,monospace;font-size:0.70rem">${i+1}</td>`;
+        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        html+='</tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('writePlmnList').innerHTML=html;
+}
+function plmnEditorToHex(){
+    const f=selectedFile;const withAcT=hasAcT(f.name);
+    const inputs=document.querySelectorAll('#writePlmnList input');
+    const map={};
+    inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!map[idx])map[idx]={mcc:'',mnc:'',act:''};map[idx][field]=inp.value.trim();});
+    let hex='';
+    Object.keys(map).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(idx=>{
+        const e=map[idx];
+        if(!e.mcc&&!e.mnc){hex+=withAcT?'FFFFFF0000':'FFFFFF';}
+        else{hex+=encodePlmn(e.mcc,e.mnc);if(withAcT)hex+=(e.act||'0000').padEnd(4,'0');}
+    });
+    return hex.toUpperCase();
+}
+function onPlmnEdit(){
+    const newHex=plmnEditorToHex();
+    document.getElementById('writeHexInput').value=newHex;
+    writeExpectedSize=writeOrigHex.length;
+    document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';
+    const changed=newHex!==writeOrigHex;
+    document.getElementById('writeSubmitBtn').disabled=!changed;
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    document.getElementById('writeStatus').innerHTML='';
+    document.getElementById('writePlmnHexInput').value=newHex;
+}
+function switchPlmnMode(mode){
+    const tbl=document.getElementById('writePlmnList'),hex=document.getElementById('writePlmnHex');
+    const tBtn=document.getElementById('plmnModeTable'),hBtn=document.getElementById('plmnModeHex');
+    if(mode==='hex'){
+        tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';
+        tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');
+        document.getElementById('writePlmnHexInput').value=document.getElementById('writeHexInput').value;
+    }else{
+        tbl.style.display='';tbl.style.flex='1';hex.style.display='none';
+        hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');
+    }
+}
+function onPlmnHexInput(){
+    const cur=document.getElementById('writePlmnHexInput').value.toUpperCase().replace(/\s/g,'');
+    document.getElementById('writeHexInput').value=cur;
+    writeExpectedSize=writeOrigHex.length;
+    document.getElementById('writeHexCount').textContent='('+cur.length+'/'+writeExpectedSize+')';
+    const changed=cur!==writeOrigHex;
+    let sizeOk=true;if(writeExpectedSize>0&&cur.length!==writeExpectedSize)sizeOk=false;
+    document.getElementById('writeSubmitBtn').disabled=!changed||!sizeOk;
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    document.getElementById('writeStatus').innerHTML='';
+}
+let accOrigBits={};
+function renderAccEditor(){
+    const r=readCache[selectedFile.path];if(!r||!r.data)return;
+    const bits=parseAccBits(r.data);accOrigBits=JSON.parse(JSON.stringify(bits));
+    let html='<table style="width:auto;border-collapse:collapse" class="rec-table"><thead><tr><th>#</th><th>Class</th><th>Status</th></tr></thead><tbody>';
+    for(let i=0;i<16;i++){
+        const label=ACC_CLASSES[i]||('Class '+i);
+        const on=!!bits[i];
+        html+=`<tr><td>${i}</td><td style="font-family:'Segoe UI',sans-serif">${label}</td><td><select data-bit="${i}" onchange="onAccChange()" style="font-size:0.72rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${on?' selected':''}>True</option><option value="false"${!on?' selected':''}>False</option></select></td></tr>`;
+    }
+    html+='</tbody></table>';document.getElementById('writeAccList').innerHTML=html;
+}
+function onAccChange(){
+    const bits={};document.querySelectorAll('#writeAccList select').forEach(s=>bits[parseInt(s.getAttribute('data-bit'))]=(s.value==='true'));
+    const newHex=accBitsToHex(bits);
+    document.getElementById('writeHexInput').value=newHex;
+    writeExpectedSize=writeOrigHex.length;
+    document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';
+    let changed=false;for(let k=0;k<16;k++)if(!!bits[k]!==!!accOrigBits[k]){changed=true;break;}
+    document.getElementById('writeSubmitBtn').disabled=!changed;
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    document.getElementById('writeStatus').innerHTML='';
+}
+async function api(u,b){try{const o=b!==undefined?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{method:'GET'};return await(await fetch(u,o)).json();}catch(e){return{success:false,error:e.message};}}
+function setStep(n){currentStep=n;for(let i=1;i<=2;i++){document.getElementById('step'+i).className='step '+(i<n?'step-done':i===n?'step-active':'step-inactive');}document.getElementById('mainContent').style.display=n>=2?'flex':'none';if(n<2)document.getElementById('setupPanel').style.display='block';}
+function setBadge(id,t,c){const e=document.getElementById(id);if(!t){e.style.display='none';return;}e.style.display='';e.className='status-badge'+(c?' status-'+c:'');e.textContent=t;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function copyCardContent(btn){
+    var section=btn.closest('.detail-section');
+    var copyable=section?section.querySelector('.card-copyable'):null;
+    if(!copyable)return;
+    var table=copyable.querySelector('table');
+    var text='';
+    if(table){
+        var rows=table.querySelectorAll('tr');
+        rows.forEach(function(row){
+            var cells=[];
+            row.querySelectorAll('th,td').forEach(function(cell){cells.push(cell.innerText.trim());});
+            text+=cells.join('\t')+'\n';
+        });
+    }else{
+        text=copyable.innerText||copyable.textContent||'';
+    }
+    navigator.clipboard.writeText(text.trim()).then(function(){btn.textContent='✓ Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);});
+}
+const SW_MAP={
+    '9000':'Normal ending','9100':'Normal, proactive command pending',
+    '6200':'No info, state unchanged','6281':'Part of data may be corrupted','6282':'End of file reached','6283':'Selected file invalidated',
+    '6300':'Verification failed','63C1':'Verification failed, 1 retry left','63C2':'Verification failed, 2 retries left','63C3':'Verification failed, 3 retries left',
+    '6400':'State of non-volatile memory unchanged','6500':'State of non-volatile memory changed','6581':'Memory failure',
+    '6700':'Wrong length','6800':'No information given','6881':'Logical channel not supported','6882':'Secure messaging not supported',
+    '6900':'No information given','6981':'Command incompatible with file structure','6982':'Security status not satisfied','6983':'Authentication method blocked',
+    '6984':'Referenced data invalidated','6985':'Conditions of use not satisfied','6986':'Command not allowed (no EF selected)',
+    '6A80':'Incorrect parameters in data field','6A81':'Function not supported','6A82':'File not found','6A83':'Record not found',
+    '6A84':'Not enough memory space','6A86':'Incorrect P1-P2','6A87':'Lc inconsistent with P1-P2','6A88':'Referenced data not found',
+    '6B00':'Wrong parameter(s) P1-P2','6D00':'Instruction code not supported','6E00':'Class not supported','6F00':'Technical problem',
+};
+function swDesc(sw){return SW_MAP[sw.toUpperCase()]||'';}
+function fmtSW(sw){if(!sw||sw==='0000')return'';return sw.toUpperCase();}
+
+function syntaxHL(json){
+    return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function(m){var c='json-number';if(/^"/.test(m)){c=/:$/.test(m)?'json-key':'json-string';}
+        else if(/true|false/.test(m)){c='json-boolean';}else if(/null/.test(m)){c='json-null';}
+        return'<span class="'+c+'">'+m+'</span>';});
+}
+
+async function refreshPorts(){
+    const r=await api('/ports');const sel=document.getElementById('portSelect');
+    sel.innerHTML='<option value="">Select a port...</option>';
+    if(r.ports){r.ports.sort((a,b)=>(a.device.includes('modem')?0:1)-(b.device.includes('modem')?0:1)).forEach(p=>{const o=document.createElement('option');o.value=p.device;o.textContent=`${p.device}  (${p.description})`;sel.appendChild(o);});
+        const auto=r.ports.find(p=>{const d=(p.description+' '+p.device).toLowerCase();return d.includes('samsung')||d.includes('android');});
+        if(auto)sel.value=auto.device;
+    }
+}
+async function doConnect(){
+    const port=document.getElementById('portSelect').value;
+    if(!port){setBadge('connectStatus','Please select a port','err');return;}
+    setBadge('connectStatus','Connecting...','warn');
+    const r=await api('/connect',{port});
+    if(!r.success){setBadge('connectStatus','❌ '+r.error,'err');return;}
+    setBadge('connectStatus','Checking AT+CRSM...','warn');
+    const at=await api('/at_check',{});
+    if(!at.success){setBadge('connectStatus','❌ '+at.error,'err');return;}
+    if(!at.crsm){setBadge('connectStatus','⚠️ AT OK but CRSM not supported','warn');return;}
+    setBadge('connectStatus','✅ Connected','ok');
+    document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('portSelect').disabled=true;
+    setStep(2);loadFileTree();
+}
+async function doDisconnect(){
+    await api('/disconnect',{});setBadge('connectStatus','','');
+    document.getElementById('btnConnect').style.display='';document.getElementById('btnDisconnect').style.display='none';document.getElementById('portSelect').disabled=false;
+    admVerified=false;verifiedAdm='';verifiedAdmType='';
+    document.getElementById('admInput').value='';document.getElementById('admInput').readOnly=false;
+    document.getElementById('admCount').textContent='(0/16)';document.getElementById('admStatus').innerHTML='';
+    document.getElementById('btnAdmVerify').disabled=true;
+    document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
+    document.getElementById('detailFileName').textContent='';
+    document.getElementById('btnAdm').style.display='none';document.getElementById('btnAdm').textContent='🔐 ADM';document.getElementById('btnAdm').disabled=false;document.getElementById('btnWrite').style.display='none';
+    readCache={};selectedFile=null;allFiles=[];
+    document.getElementById('fileTree').innerHTML='';document.getElementById('fileCount').textContent='';
+    document.getElementById('searchInput').value='';
+    setStep(1);
+}
+async function loadFileTree(){const r=await api('/files');if(!r.files)return;allFiles=r.files;document.getElementById('fileCount').textContent=`(${allFiles.filter(f=>f.type==='EF').length} EFs)`;renderTree(allFiles);}
+function renderTree(files){
+    const c=document.getElementById('fileTree');c.innerHTML='';const q=(document.getElementById('searchInput').value||'').toUpperCase();
+    const groups={};files.forEach(f=>{const g=f.path.split('/')[0];if(!groups[g])groups[g]=[];groups[g].push(f);});
+    ['MF','ADF.USIM'].forEach(gN=>{
+        if(!groups[gN])return;let items=groups[gN];
+        if(q){items=items.filter(f=>f.name.toUpperCase().includes(q)||f.fid.toUpperCase().includes(q)||f.path.toUpperCase().includes(q));if(!items.length)return;}
+        const grp=document.createElement('div');grp.className='tree-group';
+        const hdr=document.createElement('div');hdr.className='tree-group-header';
+        const icons={'MF':'📁','ADF.USIM':'📱','ADF.ISIM':'📞'};
+        hdr.innerHTML=`<span class="tree-group-arrow open">▶</span>${icons[gN]||'📁'} ${gN} <span style="color:#aaa;font-weight:400;font-size:0.66rem">(${items.filter(f=>f.type==='EF').length})</span>`;
+        hdr.onclick=()=>{const a=hdr.querySelector('.tree-group-arrow'),b=grp.querySelector('.tree-group-body');a.classList.toggle('open');b.style.display=a.classList.contains('open')?'':'none';};
+        grp.appendChild(hdr);
+        const body=document.createElement('div');body.className='tree-group-body';
+        items.forEach(f=>{
+            const item=document.createElement('div');const isDF=f.type==='DF';item.className='tree-item'+(isDF?' df-item':'');
+            const cached=readCache[f.path];let dot='unread';if(cached)dot=cached.error?'read-err':'read-ok';
+            const st={'transparent':'Transparent','linear_fixed':'Linear Fixed','cyclic':'Cyclic','ber_tlv':'BER-TLV'}[f.structure]||'';
+            item.innerHTML=`<span class="read-dot ${dot}"></span><span class="fid">${f.fid}</span><span class="fname">${f.name}</span>${!isDF?`<span class="ftype">${st}</span>`:''}`;
+            if(!isDF)item.onclick=()=>selectFile(f,item);body.appendChild(item);
+        });
+        grp.appendChild(body);c.appendChild(grp);
+    });
+}
+function filterTree(){renderTree(allFiles);}
+function toggleSearchClear(){document.getElementById('searchClear').style.display=document.getElementById('searchInput').value?'':'none';}
+function clearSearch(){document.getElementById('searchInput').value='';document.getElementById('searchClear').style.display='none';renderTree(allFiles);}
+function selectFile(f,el){
+    document.querySelectorAll('.tree-item.selected').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');
+    selectedFile=f;document.getElementById('detailFileName').textContent=f.path.replace(/\//g,' / ');
+    if(readCache[f.path]){
+        const cached=readCache[f.path];
+        if(cached.error)showReadError(f,cached);else showReadResult(f,cached);
+    }else doRead();
+}
+async function doRead(){
+    if(!selectedFile)return;const f=selectedFile;
+    document.getElementById('detailEmpty').style.display='none';document.getElementById('detailContent').style.display='';
+    document.getElementById('detailContent').innerHTML='<div style="color:#aaa;padding:20px;text-align:center">⏳ Reading...</div>';
+    document.getElementById('btnAdm').style.display='none';document.getElementById('btnWrite').style.display='none';
+    const r=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});logConsole(`→ READ ${f.name} (${f.fid})`,'cmd');
+    if(r.success){readCache[f.path]=r;logConsole(`← OK (${r.structure})`,'resp');showReadResult(f,r);}
+    else{readCache[f.path]={error:r.error,sw:r.sw,meta:r.meta};logConsole(`← ERROR: ${r.error}`,'err');showReadError(f,r);}
+    renderTree(allFiles);
+    document.querySelectorAll('.tree-item').forEach(el=>{const fn=el.querySelector('.fname'),fi=el.querySelector('.fid');if(fn&&fi&&fn.textContent===f.name&&fi.textContent===f.fid)el.classList.add('selected');});
+}
+function showReadResult(f,r){
+    document.getElementById('detailEmpty').style.display='none';document.getElementById('detailContent').style.display='';
+    document.getElementById('btnAdm').style.display='';document.getElementById('btnWrite').style.display='';document.getElementById('btnWrite').disabled=!admVerified;
+    if(admVerified){document.getElementById('btnAdm').textContent='🔐 Verified';document.getElementById('btnAdm').disabled=true;}
+    const noAdm=NO_ADM_FILES.includes(f.name);
+    const isIsim=f.path.startsWith('ADF.ISIM/');
+    if(isIsim){document.getElementById('btnAdm').style.display='none';document.getElementById('btnWrite').style.display='none';}
+    else if(noAdm){document.getElementById('btnAdm').style.display='none';document.getElementById('btnWrite').disabled=false;}
+    let h='';
+    if(r.meta&&Object.keys(r.meta).length){h+='<div class="detail-section"><div class="detail-section-title">📋 File Info</div><dl class="detail-meta">';const m=r.meta;
+        if(m.file_size)h+=`<dt>Size</dt><dd>${m.file_size} bytes</dd>`;
+        if(m.record_len)h+=`<dt>Record Len</dt><dd>${m.record_len}</dd>`;if(m.num_records)h+=`<dt>Records</dt><dd>${m.num_records}</dd>`;
+        if(m.lifecycle)h+=`<dt>Lifecycle</dt><dd>${m.lifecycle}</dd>`;
+        h+='</dl></div>';}
+    h+='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">📦 Raw Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div>';
+    if(r.structure==='linear_fixed'||r.structure==='cyclic'){if(Array.isArray(r.data)){h+='<div class="card-copyable"><table class="rec-table"><thead><tr><th>#</th><th>Hex Data</th></tr></thead><tbody>';r.data.forEach((rec,i)=>{h+=`<tr><td>${i+1}</td><td>${rec?rec.toUpperCase():'<span style="color:#e74c3c">null</span>'}</td></tr>`;});h+='</tbody></table></div>';}}
+    else{h+=`<div class="card-copyable hex-display">${(r.data||'').toUpperCase()||'<span style="color:#bbb">(empty)</span>'}</div>`;}
+    h+='</div>';
+    // PLMN custom table
+    if(isPlmnFile(f.name)&&r.data&&typeof r.data==='string'){
+        h+=renderPlmnTable(f.name,r.data);
+    } else if(isServiceTableFile(f.path)&&r.data&&typeof r.data==='string'){
+        h+='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">🔍 Decoded Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div><div id="serviceTableView" class="card-copyable" style="padding:8px 12px"><span style="color:#aaa">Loading service table...</span></div></div>';
+    } else if(f.name==='EF.ACC'&&r.data&&typeof r.data==='string'){
+        h+=renderAccTable(r.data);
+    } else if(isUrspFile(f.path)&&r.decoded&&r.decoded['URSP rules']){
+        h+='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">🔍 Decoded Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div>';
+        var treeStr=formatUrspTree(r.decoded);
+        h+='<pre class="card-copyable" style="padding:10px 12px;font-family:Menlo,monospace;font-size:0.74rem;color:#333;white-space:pre;line-height:1.3;margin:0">'+esc(treeStr)+'</pre>';
+        h+='</div>';
+    } else if(r.decoded){
+        h+='<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center">🔍 Decoded Data<button class="btn btn-dark" onclick="copyCardContent(this)" style="margin-left:auto;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button></div>';
+        var decData=r.decoded;
+        if(Array.isArray(decData)){var filtered=decData.filter(d=>d!==null);decData=filtered.length===1?filtered[0]:filtered;}
+        if(decData&&typeof decData==='object'&&!Array.isArray(decData)){
+            var keys=Object.keys(decData);
+            if(keys.length===1){var val=decData[keys[0]];
+                if(typeof val==='string'||typeof val==='number'||typeof val==='boolean'){h+='<div style="padding:10px 12px;font-family:Menlo,monospace;font-size:0.74rem;color:#333">'+esc(String(val))+'</div>';}
+                else{h+='<div class="card-copyable hex-display" style="max-height:300px"><pre class="json-hl">'+syntaxHL(JSON.stringify(val,null,2))+'</pre></div>';}
+            }
+            else{h+='<div class="card-copyable hex-display" style="max-height:300px"><pre class="json-hl">'+syntaxHL(JSON.stringify(decData,null,2))+'</pre></div>';}
+        }else if(decData!==null&&decData!==undefined){h+='<div class="card-copyable hex-display" style="max-height:300px"><pre class="json-hl">'+syntaxHL(JSON.stringify(decData,null,2))+'</pre></div>';}
+        else{h+='<div style="color:#bbb;font-size:0.74rem;padding:10px 12px">(no decoded data)</div>';}
+        h+='</div>';
+    }
+    document.getElementById('detailContent').innerHTML=h;
+    // Async: load service table
+    if(isServiceTableFile(f.path)&&r.data&&typeof r.data==='string'){
+        renderServiceTableView(f.path,r.data);
+    }
+}
+function showReadError(f,r){
+    document.getElementById('detailEmpty').style.display='none';document.getElementById('detailContent').style.display='';
+    document.getElementById('btnAdm').style.display='';document.getElementById('btnWrite').style.display='';document.getElementById('btnWrite').disabled=true;
+    if(admVerified){document.getElementById('btnAdm').textContent='🔐 Verified';document.getElementById('btnAdm').disabled=true;}
+    const noAdm=NO_ADM_FILES.includes(f.name);
+    if(noAdm){document.getElementById('btnAdm').style.display='none';document.getElementById('btnWrite').disabled=false;}
+    const sw=r.sw||'';
+    const desc=swDesc(sw);
+    const is6982=sw.toUpperCase()==='6982';
+    let h='<div class="detail-section"><div class="detail-section-title">📋 File Info</div><dl class="detail-meta">';
+    if(r.meta){const m=r.meta;
+        if(m.file_size)h+=`<dt>Size</dt><dd>${m.file_size} bytes</dd>`;
+        if(m.record_len)h+=`<dt>Record Len</dt><dd>${m.record_len}</dd>`;
+        if(m.num_records)h+=`<dt>Records</dt><dd>${m.num_records}</dd>`;
+        if(m.lifecycle)h+=`<dt>Lifecycle</dt><dd>${m.lifecycle}</dd>`;
+    }
+    if(sw)h+=`<dt>Status Word</dt><dd style="color:#e74c3c">${fmtSW(sw)}${desc?' ('+desc+')':''}</dd>`;
+    if(is6982)h+=`<dt></dt><dd style="color:#e67e22">🔐 ADM verification required</dd>`;
+    if(!desc&&r.error)h+=`<dt>Error</dt><dd style="color:#888">${r.error}</dd>`;
+    h+='</dl></div>';
+    h+='<div class="detail-section"><div class="detail-section-title">📦 Raw Data</div>';
+    h+='<div class="hex-display"><span style="color:#bbb">(empty)</span></div></div>';
+    document.getElementById('detailContent').innerHTML=h;
+}
+function openWriteMode(){
+    if(!selectedFile||!readCache[selectedFile.path])return;
+    const r=readCache[selectedFile.path];
+    if(r.error)return;
+    const noAdm=NO_ADM_FILES.includes(selectedFile.name);
+    if(!noAdm&&!admVerified)return;
+    openWritePopup();
+}
+function openWritePopup(){
+    const f=selectedFile,r=readCache[f.path];if(!r||r.error)return;
+    document.getElementById('writeEfName').textContent=f.path.replace(/\//g,' / ');
+    document.getElementById('writeStatus').textContent='';
+    document.getElementById('writeSubmitBtn').disabled=true;
+    const st=f.structure||r.structure||'transparent';
+    const isTlv=st==='ber_tlv',isLf=st==='linear_fixed'||st==='cyclic';
+    const isSvcTable=f.path.endsWith('/EF.UST')||f.path.endsWith('/EF.IST')||f.path.endsWith('/EF.EST');
+    const isPlmn=isPlmnFile(f.name);
+    const isAcc=f.name==='EF.ACC';
+    document.getElementById('writeTlvSection').style.display=isTlv?'block':'none';
+    document.getElementById('writeHexRow').style.display=(isTlv||isSvcTable||isPlmn||isAcc)?'none':'block';
+    document.getElementById('writeButtonRow').style.display=isTlv?'none':'flex';
+    document.getElementById('writeServiceTable').style.display='none';
+    document.getElementById('writePlmnSection').style.display='none';
+    document.getElementById('writeAccSection').style.display='none';
+    document.getElementById('writeRecordRow').style.display=isLf?'block':'none';
+    writeExpectedSize=0;
+    if(isLf&&Array.isArray(r.data)){
+        const sel=document.getElementById('writeRecordSelect');sel.innerHTML='';
+        r.data.forEach((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Record '+(i+1);sel.appendChild(o);});
+        writeOrigHex=(r.data[0]||'').toUpperCase();
+        document.getElementById('writeHexInput').value=writeOrigHex;
+        writeExpectedSize=(r.record_len||0)*2;
+    }else if(!isTlv){
+        writeOrigHex=(typeof r.data==='string'?r.data:'').toUpperCase();
+        document.getElementById('writeHexInput').value=writeOrigHex;
+        writeExpectedSize=((r.meta||{}).file_size||0)*2;
+    }
+    const expBytes=Math.ceil(writeExpectedSize/2);
+    document.getElementById('writeEfSize').textContent='('+expBytes+' Bytes)';
+    checkWriteChanged();
+    document.getElementById('writeOverlay').classList.add('show');
+    if(isSvcTable){document.getElementById('writeServiceTable').style.display='flex';renderServiceTable();}
+    if(isTlv){loadTlvFromRaw();}
+    if(isPlmn){document.getElementById('writePlmnSection').style.display='flex';renderPlmnEditor();}
+    if(isAcc){document.getElementById('writeAccSection').style.display='block';renderAccEditor();}
+}
+function closeWritePopup(){document.getElementById('writeOverlay').classList.remove('show');}
+function onWriteRecordChange(){
+    const r=readCache[selectedFile.path];
+    const idx=parseInt(document.getElementById('writeRecordSelect').value);
+    if(r&&Array.isArray(r.data)){writeOrigHex=(r.data[idx]||'').toUpperCase();document.getElementById('writeHexInput').value=writeOrigHex;document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeStatus').innerHTML='';}
+    checkWriteChanged();
+}
+function checkWriteChanged(){
+    const cur=document.getElementById('writeHexInput').value.toUpperCase().replace(/\s/g,'');
+    const changed=cur!==writeOrigHex;
+    document.getElementById('writeStatus').innerHTML='';
+    document.getElementById('writeHexCount').textContent='('+cur.length+'/'+writeExpectedSize+')';
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    let sizeOk=true;
+    if(writeExpectedSize>0&&cur.length!==writeExpectedSize)sizeOk=false;
+    document.getElementById('writeSubmitBtn').disabled=!changed||!sizeOk;
+}
+function restoreOrigHex(){
+    document.getElementById('writeHexInput').value=writeOrigHex;
+    document.getElementById('writeStatus').innerHTML='';
+    if(writeServiceOrig&&Object.keys(writeServiceOrig).length){
+        document.querySelectorAll('#writeServiceList select').forEach(s=>{const svc=parseInt(s.getAttribute('data-svc'));s.value=writeServiceOrig[svc]?'true':'false';});
+    }
+    if(selectedFile&&isPlmnFile(selectedFile.name)){renderPlmnEditor();}
+    if(selectedFile&&selectedFile.name==='EF.ACC'){renderAccEditor();}
+    checkWriteChanged();
+}
+async function submitWrite(){
+    const f=selectedFile,r=readCache[f.path];
+    // PLMN validation: MCC and MNC must both be filled or both empty
+    if(isPlmnFile(f.name)){
+        const inputs=document.querySelectorAll('#writePlmnList input');
+        const rows={};
+        inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!rows[idx])rows[idx]={};rows[idx][field]=inp.value.trim();});
+        for(const idx in rows){
+            const e=rows[idx];
+            const hasMcc=e.mcc&&e.mcc.length>0,hasMnc=e.mnc&&e.mnc.length>0;
+            if(hasMcc!==hasMnc){
+                document.getElementById('writeStatus').innerHTML=`<span style="color:#e74c3c">Row ${parseInt(idx)+1}: MCC and MNC must both be filled or both empty</span>`;
+                return;
+            }
+        }
+    }
+    const hex=document.getElementById('writeHexInput').value.replace(/\s/g,'');
+    const isLf=r.structure==='linear_fixed'||r.structure==='cyclic';
+    const recNr=isLf?parseInt(document.getElementById('writeRecordSelect').value)+1:0;
+    document.getElementById('writeStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';
+    document.getElementById('writeSubmitBtn').disabled=true;
+    logConsole(`→ WRITE ${f.name} (${f.fid})${isLf?' rec#'+recNr:''}`,'cmd');
+    const wr=await api('/write',{fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
+    if(wr.success){
+        logConsole('← OK','resp');
+        document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';
+        writeOrigHex=hex.toUpperCase();
+        document.getElementById('writeSubmitBtn').disabled=true;
+        document.getElementById('writeRestoreBtn').disabled=true;
+        // Re-read to refresh
+        delete readCache[f.path];
+        const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});
+        if(rr.success){readCache[f.path]=rr;showReadResult(f,rr);}
+        else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showReadResult(f,r);}
+        if(isPlmnFile(f.name)&&document.getElementById('writePlmnSection').style.display!=='none'){writeOrigHex=(readCache[f.path].data||hex).toUpperCase();renderPlmnEditor();}
+    }else{
+        logConsole(`← ERROR: ${wr.error}`,'err');
+        const is6982=wr.error&&wr.error.includes('6982');
+        document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+(is6982?' — ADM required':'')+'</span>';
+        document.getElementById('writeSubmitBtn').disabled=false;
+    }
+}
+/* Service Table UI */
+function isServiceTableFile(path){return path&&(path.endsWith('/EF.UST')||path.endsWith('/EF.IST')||path.endsWith('/EF.EST'));}
+function hexToBits(hex){const bits={};for(let i=0;i<hex.length;i+=2){const byte=parseInt(hex.substr(i,2),16);for(let b=0;b<8;b++)bits[(i/2)*8+b+1]=!!(byte&(1<<b));}return bits;}
+function bitsToHex(bits,byteLen){let hex='';for(let i=0;i<byteLen;i++){let byte=0;for(let b=0;b<8;b++){if(bits[i*8+b+1])byte|=(1<<b);}hex+=('0'+byte.toString(16)).slice(-2);}return hex.toUpperCase();}
+async function renderServiceTableView(path,hexData){
+    const el=document.getElementById('serviceTableView');if(!el)return;
+    const efName=path.endsWith('/EF.UST')?'UST':path.endsWith('/EF.IST')?'IST':'EST';
+    const resp=await api('/service_map',{ef:efName});
+    if(!resp.success||!resp.map){el.innerHTML='<span style="color:#e74c3c">Failed to load service map</span>';return;}
+    const bits=hexToBits(hexData.toUpperCase().replace(/\s/g,''));
+    const keys=Object.keys(resp.map).sort((a,b)=>parseInt(a)-parseInt(b));
+    let html='<table class="rec-table" style="width:auto"><thead><tr><th>#</th><th>Service</th><th>Status</th></tr></thead><tbody>';
+    keys.forEach(num=>{
+        const label=resp.map[num];
+        const enabled=!!bits[parseInt(num)];
+        const color=enabled?'#27ae60':'#ccc';
+        const text=enabled?'True':'False';
+        html+=`<tr><td>${num}</td><td style="font-family:'Segoe UI',sans-serif">${label}</td><td style="color:${color};font-weight:600">${text}</td></tr>`;
+    });
+    html+='</tbody></table>';
+    el.innerHTML=html;
+}
+async function renderServiceTable(){
+    const r=readCache[selectedFile.path];if(!r)return;
+    const efName=selectedFile.path.endsWith('/EF.UST')?'UST':selectedFile.path.endsWith('/EF.IST')?'IST':'EST';
+    const resp=await api('/service_map',{ef:efName});
+    if(!resp.success||!resp.map)return;
+    writeServiceMap=resp.map;
+    const rawHex=(typeof r.data==='string')?r.data.toUpperCase().replace(/\s/g,''):'';
+    const bits=hexToBits(rawHex);writeServiceOrig=JSON.parse(JSON.stringify(bits));
+    let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="width:40px;padding:3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">#</th><th style="padding:3px 8px;text-align:left;background:#f0f2f5;font-size:0.70rem">Service</th><th style="width:80px;padding:3px 10px 3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">Status</th></tr></thead><tbody>';
+    Object.keys(writeServiceMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(num=>{
+        const label=writeServiceMap[num],enabled=!!bits[parseInt(num)];
+        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:Consolas,monospace">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;
+    });
+    html+='</tbody></table>';document.getElementById('writeServiceList').innerHTML=html;
+}
+function onServiceChange(){
+    const bits={};document.querySelectorAll('#writeServiceList select').forEach(s=>bits[parseInt(s.getAttribute('data-svc'))]=(s.value==='true'));
+    let changed=false;for(const k in writeServiceOrig)if(!!bits[k]!==!!writeServiceOrig[k]){changed=true;break;}
+    const newHex=bitsToHex(bits,Math.ceil(writeExpectedSize/2));
+    document.getElementById('writeHexInput').value=newHex;
+    document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';
+    document.getElementById('writeSubmitBtn').disabled=!changed;
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    document.getElementById('writeStatus').innerHTML='';
+    // Sync hex input
+    document.getElementById('writeServiceHexInput').value=newHex;
+}
+function switchSvcMode(mode){
+    const tbl=document.getElementById('writeServiceList'),hex=document.getElementById('writeServiceHex');
+    const tBtn=document.getElementById('svcModeTable'),hBtn=document.getElementById('svcModeHex');
+    if(mode==='hex'){
+        tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';
+        tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');
+        document.getElementById('writeServiceHexInput').value=document.getElementById('writeHexInput').value;
+    }else{
+        tbl.style.display='';tbl.style.flex='1';hex.style.display='none';
+        hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');
+    }
+}
+function onServiceHexInput(){
+    const cur=document.getElementById('writeServiceHexInput').value.toUpperCase().replace(/\s/g,'');
+    document.getElementById('writeHexInput').value=cur;
+    document.getElementById('writeHexCount').textContent='('+cur.length+'/'+writeExpectedSize+')';
+    const changed=cur!==writeOrigHex;
+    let sizeOk=true;if(writeExpectedSize>0&&cur.length!==writeExpectedSize)sizeOk=false;
+    document.getElementById('writeSubmitBtn').disabled=!changed||!sizeOk;
+    document.getElementById('writeRestoreBtn').disabled=!changed;
+    document.getElementById('writeStatus').innerHTML='';
+}
+/* BER-TLV UI */
+function parseTlvFromRaw(rawHex){
+    const result=[];if(!rawHex)return result;const hex=rawHex.toUpperCase().replace(/\s/g,'');let i=0;
+    while(i<hex.length-2){let tagByte=parseInt(hex.substr(i,2),16),tagHex=hex.substr(i,2);i+=2;
+        if((tagByte&0x1F)===0x1F){tagHex+=hex.substr(i,2);i+=2;}
+        let lenByte=parseInt(hex.substr(i,2),16);i+=2;let dataLen=0;
+        if(lenByte<=0x7F)dataLen=lenByte;else if(lenByte===0x81){dataLen=parseInt(hex.substr(i,2),16);i+=2;}else if(lenByte===0x82){dataLen=parseInt(hex.substr(i,4),16);i+=4;}
+        result.push({tag:'0x'+tagHex,value:hex.substr(i,dataLen*2)});i+=dataLen*2;
+    }return result;
+}
+function loadTlvFromRaw(){
+    const sel=document.getElementById('writeTlvTagSelect');sel.innerHTML='';
+    document.getElementById('writeTlvHexInput').value='';document.getElementById('writeTlvWriteBtn').disabled=true;
+    document.getElementById('writeTlvRestoreBtn').disabled=true;document.getElementById('writeTlvStatus').innerHTML='';
+    tlvTagData={};
+    const r=readCache[selectedFile.path];const rawHex=r&&r.data?String(r.data):'';
+    const tlvs=parseTlvFromRaw(rawHex);
+    if(!tlvs.length){
+        // BER-TLV empty — add default tag 0x80 for URSP
+        const defaultTag=selectedFile.name==='EF.URSP'?'0x80':'0x80';
+        const o=document.createElement('option');o.value=defaultTag;o.textContent=defaultTag+' (new)';sel.appendChild(o);
+        tlvTagData[defaultTag]='';tlvOrigHex='';
+        return;
+    }
+    tlvs.forEach(t=>{const o=document.createElement('option');o.value=t.tag;o.textContent=t.tag;sel.appendChild(o);tlvTagData[t.tag]=t.value;});
+    sel.value=tlvs[0].tag;document.getElementById('writeTlvHexInput').value=tlvs[0].value;
+    tlvOrigHex=tlvs[0].value.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
+}
+function onTlvTagChange(){const tag=document.getElementById('writeTlvTagSelect').value;const val=tlvTagData[tag]||'';document.getElementById('writeTlvHexInput').value=val;tlvOrigHex=val.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;document.getElementById('writeTlvStatus').innerHTML='';}
+function checkTlvChanged(){const cur=document.getElementById('writeTlvHexInput').value.trim().replace(/\s/g,'').toUpperCase();const changed=cur!==tlvOrigHex;document.getElementById('writeTlvWriteBtn').disabled=!changed||cur.length===0;document.getElementById('writeTlvRestoreBtn').disabled=!changed;document.getElementById('writeTlvStatus').innerHTML='';}
+function tlvRestore(){document.getElementById('writeTlvHexInput').value=tlvOrigHex;document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;document.getElementById('writeTlvStatus').innerHTML='';}
+async function tlvWrite(){
+    const tag=document.getElementById('writeTlvTagSelect').value;const data=document.getElementById('writeTlvHexInput').value.trim().replace(/\s/g,'').toUpperCase();
+    if(!tag||!data)return;
+    // Validate: must start with tag byte (e.g. 80)
+    const tagHex=tag.replace('0x','').replace('0X','').toUpperCase();
+    if(!data.startsWith(tagHex)){
+        document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Hex data must start with tag ${tagHex}</span>`;return;
+    }
+    // Validate: check BER length matches actual data
+    var i=tagHex.length;
+    var lenByte=parseInt(data.substr(i,2),16);i+=2;var expectedLen=0;
+    if(lenByte<=0x7F){expectedLen=lenByte;}
+    else if(lenByte===0x81){expectedLen=parseInt(data.substr(i,2),16);i+=2;}
+    else if(lenByte===0x82){expectedLen=parseInt(data.substr(i,4),16);i+=4;}
+    var actualLen=(data.length-i)/2;
+    if(actualLen!==expectedLen){
+        document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Length mismatch: expected ${expectedLen} bytes, got ${actualLen} bytes</span>`;return;
+    }
+    document.getElementById('writeTlvStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeTlvWriteBtn').disabled=true;
+    logConsole(`→ TLV WRITE ${selectedFile.name} tag=${tag}`,'cmd');
+    const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
+    if(wr.success){
+        logConsole('← OK','resp');
+        document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';
+        tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();
+        document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
+        // Re-read to refresh
+        delete readCache[selectedFile.path];
+        const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});
+        if(rr.success){readCache[selectedFile.path]=rr;showReadResult(selectedFile,rr);}
+    }else{
+        logConsole(`← ERROR: ${wr.error}`,'err');
+        document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;
+        document.getElementById('writeTlvWriteBtn').disabled=false;
+    }
+}
+function openAdmPopup(){
+    document.getElementById('admInput').value='';document.getElementById('admInput').readOnly=false;
+    document.getElementById('admStatus').innerHTML='';document.getElementById('admCount').textContent='(0/16)';
+    document.getElementById('btnAdmVerify').disabled=true;
+    document.getElementById('admOverlay').classList.add('show');
+}
+function closeAdmPopup(){document.getElementById('admOverlay').classList.remove('show');}
+function updateAdmBtn(){const v=document.getElementById('admInput').value.replace(/\s/g,'');document.getElementById('admCount').textContent='('+v.length+'/16)';document.getElementById('btnAdmVerify').disabled=!(v.length===16&&/^[0-9a-fA-F]+$/.test(v));}
+async function doAdmVerify(){
+    const adm=document.getElementById('admInput').value.replace(/\s/g,'');
+    document.getElementById('admStatus').innerHTML='<span style="color:#e67e22">⏳ Verifying...</span>';document.getElementById('btnAdmVerify').disabled=true;
+    logConsole('→ VERIFY ADM','cmd');const r=await api('/verify_adm',{adm});
+    if(r.success){
+        logConsole('← OK (ADM verified)','resp');
+        admVerified=true;verifiedAdm=adm;verifiedAdmType='ADM1';
+        document.getElementById('admStatus').innerHTML='<span class="status-badge status-ok">✅ Verified</span>';
+        document.getElementById('admInput').readOnly=true;
+        // Update header buttons
+        document.getElementById('btnAdm').textContent='🔐 Verified';document.getElementById('btnAdm').disabled=true;
+        document.getElementById('btnWrite').disabled=false;
+        setTimeout(closeAdmPopup,800);
+    }else{
+        logConsole(`← ERROR: ${r.error}`,'err');
+        document.getElementById('admStatus').innerHTML=`<span style="color:#e74c3c">❌ ${r.error}</span>`;
+        document.getElementById('btnAdmVerify').disabled=false;
+    }
+}
+function logConsole(t,type){}
+function initResizer(rid,lid){const resizer=document.getElementById(rid);const left=document.getElementById(lid);let dragging=false;resizer.addEventListener('mousedown',e=>{dragging=true;e.preventDefault();document.body.style.cursor='col-resize';document.body.style.userSelect='none';});document.addEventListener('mousemove',e=>{if(!dragging)return;const rect=left.getBoundingClientRect();const w=e.clientX-rect.left;if(w>=200&&w<=window.innerWidth*0.5){left.style.flex='none';left.style.width=w+'px';}});document.addEventListener('mouseup',()=>{if(dragging){dragging=false;document.body.style.cursor='';document.body.style.userSelect='';}});}
+refreshPorts();initResizer('resizer','leftPanel');
+</script>
+</body>
+</html>

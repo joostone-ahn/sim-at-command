@@ -1,0 +1,26 @@
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.kiro/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+
+# Logs
+logs/
+
+# pySim git
+pysim/.git/
+pysim/.git_bak/
+
+# Archives
+*.zip
+
+# Reference (original sim-reader project)
+sim-reader/
