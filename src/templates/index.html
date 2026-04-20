@@ -491,8 +491,17 @@ function syntaxHL(json){
 async function refreshPorts(){
     const r=await api('/ports');const sel=document.getElementById('portSelect');
     sel.innerHTML='<option value="">Select a port...</option>';
-    if(r.ports){r.ports.sort((a,b)=>(a.device.includes('modem')?0:1)-(b.device.includes('modem')?0:1)).forEach(p=>{const o=document.createElement('option');o.value=p.device;o.textContent=`${p.device}  (${p.description})`;sel.appendChild(o);});
-        const auto=r.ports.find(p=>{const d=(p.description+' '+p.device).toLowerCase();return d.includes('modem')||d.includes('samsung')||d.includes('android');});
+    if(r.ports){
+        // Sort: modem ports first (check both device and description)
+        r.ports.sort((a,b)=>{
+            const aModem=(a.device+' '+a.description).toLowerCase().includes('modem')?0:1;
+            const bModem=(b.device+' '+b.description).toLowerCase().includes('modem')?0:1;
+            return aModem-bModem;
+        });
+        r.ports.forEach(p=>{const o=document.createElement('option');o.value=p.device;o.textContent=`${p.device}  (${p.description})`;sel.appendChild(o);});
+        // Auto-select: prefer modem > samsung/android
+        const auto=r.ports.find(p=>{const d=(p.description+' '+p.device).toLowerCase();return d.includes('modem');})
+            || r.ports.find(p=>{const d=(p.description+' '+p.device).toLowerCase();return d.includes('samsung')||d.includes('android');});
         if(auto)sel.value=auto.device;
     }
 }
