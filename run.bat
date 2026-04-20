@@ -30,7 +30,7 @@ if not exist "%PYTHON%" (
 )
 
 REM Install dependencies
-"%PYTHON%" -c "import flask, serial" >nul 2>&1
+"%PYTHON%" -c "import flask, serial, pySim" >nul 2>&1
 if errorlevel 1 (
     echo [SETUP] Installing dependencies...
     "%PIP%" install -q --disable-pip-version-check -r "%DIR%requirements.txt"

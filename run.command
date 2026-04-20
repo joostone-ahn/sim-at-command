@@ -30,7 +30,7 @@ if [ ! -f "$PYTHON" ]; then
 fi
 
 # Install dependencies
-if ! "$PYTHON" -c "import flask, serial" &>/dev/null; then
+if ! "$PYTHON" -c "import flask, serial, pySim" &>/dev/null; then
     echo "📦 Installing dependencies..."
     "$PIP" install -q --disable-pip-version-check -r "$DIR/requirements.txt"
     "$PIP" install -q --disable-pip-version-check -e "$DIR/pysim"
