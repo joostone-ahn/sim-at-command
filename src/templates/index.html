@@ -150,7 +150,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div style="font-size:0.72rem;color:#888">ℹ️ Get ADM1 key from your IT admin with SIM ICCID</div>
         <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:6px 10px">
             <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM1</span>
-            <input type="text" id="admInput" placeholder="16-digit hex" oninput="updateAdmBtn()" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+            <input type="text" id="admInput" placeholder="16-digit hex" oninput="updateAdmBtn()" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Menlo,Consolas,monospace;padding:3px 4px;outline:none">
             <span id="admCount" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -172,7 +172,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
     <div style="padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:hidden">
         <div id="writeRecordRow" style="display:none">
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Record Number</div>
-            <select id="writeRecordSelect" onchange="onWriteRecordChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Consolas,monospace"></select>
+            <select id="writeRecordSelect" onchange="onWriteRecordChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Menlo,Consolas,monospace"></select>
         </div>
         <div id="writeServiceTable" style="display:none;flex-direction:column;min-height:0;flex:1">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -184,7 +184,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writeServiceList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writeServiceHex" style="display:none;flex:1">
-                <textarea id="writeServiceHexInput" rows="6" oninput="onServiceHexInput()" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+                <textarea id="writeServiceHexInput" rows="6" oninput="onServiceHexInput()" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
             </div>
         </div>
         <div id="writePlmnSection" style="display:none;flex-direction:column;min-height:0;flex:1">
@@ -197,7 +197,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writePlmnList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writePlmnHex" style="display:none;flex:1">
-                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput()" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput()" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
             </div>
         </div>
         <div id="writeAccSection" style="display:none">
@@ -207,17 +207,17 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="writeHexRow" style="flex:1;display:flex;flex-direction:column">
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span id="writeEfSize" style="font-weight:400;color:#888"></span></div>
             <div style="position:relative;flex:1">
-                <textarea id="writeHexInput" style="width:100%;height:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box" oninput="checkWriteChanged()"></textarea>
+                <textarea id="writeHexInput" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box" oninput="checkWriteChanged()"></textarea>
                 <span id="writeHexCount" style="position:absolute;right:10px;bottom:8px;font-size:0.66rem;color:#bbb"></span>
             </div>
         </div>
         <div id="writeTlvSection" style="display:none">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
                 <span style="font-size:0.76rem;font-weight:600;color:#555">Tag</span>
-                <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Consolas,monospace"></select>
+                <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Menlo,Consolas,monospace"></select>
             </div>
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span style="font-weight:400;color:#aaa;font-size:0.68rem">— Full TLV format: tag (80) + BER length + value</span></div>
-            <textarea id="writeTlvHexInput" rows="8" oninput="checkTlvChanged()" style="width:100%;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical"></textarea>
+            <textarea id="writeTlvHexInput" rows="8" oninput="checkTlvChanged()" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical"></textarea>
             <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
                 <button class="btn btn-primary" id="writeTlvWriteBtn" onclick="tlvWrite()" disabled style="padding:4px 10px;font-size:0.72rem;font-weight:600;min-width:80px">✏️ Write</button>
                 <span id="writeTlvStatus" style="font-size:0.72rem"></span>
@@ -364,10 +364,10 @@ function renderPlmnEditor(){
     if(withAcT)html+='<th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">AcT</th>';
     html+='</tr></thead><tbody>';
     entries.forEach((e,i)=>{
-        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:Consolas,monospace;font-size:0.70rem">${i+1}</td>`;
-        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
-        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
-        if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace;font-size:0.70rem">${i+1}</td>`;
+        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
+        if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;
         html+='</tr>';
     });
     html+='</tbody></table>';
@@ -794,7 +794,7 @@ async function renderServiceTable(){
     let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="width:40px;padding:3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">#</th><th style="padding:3px 8px;text-align:left;background:#f0f2f5;font-size:0.70rem">Service</th><th style="width:80px;padding:3px 10px 3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">Status</th></tr></thead><tbody>';
     Object.keys(writeServiceMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(num=>{
         const label=writeServiceMap[num],enabled=!!bits[parseInt(num)];
-        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:Consolas,monospace">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;
+        html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;
     });
     html+='</tbody></table>';document.getElementById('writeServiceList').innerHTML=html;
 }
