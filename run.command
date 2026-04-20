@@ -33,6 +33,7 @@ fi
 if ! "$PYTHON" -c "import flask, serial" &>/dev/null; then
     echo "📦 Installing dependencies..."
     "$PIP" install -q --disable-pip-version-check -r "$DIR/requirements.txt"
+    "$PIP" install -q --disable-pip-version-check -e "$DIR/pysim"
 fi
 
 # Open browser after short delay

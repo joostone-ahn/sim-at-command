@@ -34,6 +34,7 @@ REM Install dependencies
 if errorlevel 1 (
     echo [SETUP] Installing dependencies...
     "%PIP%" install -q --disable-pip-version-check -r "%DIR%requirements.txt"
+    "%PIP%" install -q --disable-pip-version-check -e "%DIR%pysim"
     echo [SETUP] Done.
 )
 
