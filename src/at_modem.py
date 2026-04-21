@@ -207,16 +207,20 @@ class ATModem:
 
     @staticmethod
     def list_ports() -> list[dict]:
-        """List available serial ports (USB/modem devices only, excludes Bluetooth/debug)."""
+        """List available serial ports (modem ports only)."""
         EXCLUDE = ('bluetooth', 'debug', 'wlan')
         ports = []
         for p in serial.tools.list_ports.comports():
             dev_lower = p.device.lower()
+            desc_lower = (p.description or '').lower()
             # Skip known non-modem ports
             if any(x in dev_lower for x in EXCLUDE):
                 continue
             # Include if USB VID present OR device name contains 'usbmodem'
             if p.vid is None and 'usbmodem' not in dev_lower:
+                continue
+            # On Windows: only show modem ports (filter out Serial Port, Diagnostics, etc.)
+            if p.vid and 'modem' not in desc_lower and 'usbmodem' not in dev_lower:
                 continue
             ports.append({
                 'device': p.device,
