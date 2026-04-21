@@ -5,6 +5,7 @@ import json
 import sys
 import logging
 import platform
+import threading
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
 
@@ -18,6 +19,7 @@ app.json.sort_keys = False
 logger = logging.getLogger(__name__)
 
 modem = ATModem()
+modem_lock = threading.Lock()
 usim_aid = ''
 isim_aid = ''
 
@@ -29,9 +31,25 @@ def index():
 
 @app.route('/ports', methods=['GET'])
 def list_ports():
-    """List available serial ports."""
+    """List available serial ports with ADB device model info."""
     ports = ATModem.list_ports()
-    return jsonify({'ports': ports})
+    adb_model = _get_adb_model()
+    return jsonify({'ports': ports, 'adb_model': adb_model})
+
+
+def _get_adb_model() -> str:
+    """Get connected Android device model via adb."""
+    import subprocess
+    try:
+        r = subprocess.run(['adb', 'devices', '-l'], capture_output=True, text=True, timeout=5)
+        for line in r.stdout.strip().split('\n')[1:]:
+            if 'model:' in line:
+                for part in line.split():
+                    if part.startswith('model:'):
+                        return part.split(':', 1)[1].replace('_', ' ')
+    except Exception:
+        pass
+    return ''
 
 
 @app.route('/connect', methods=['POST'])
@@ -82,6 +100,8 @@ def read_file():
         return jsonify({'success': False, 'error': 'Missing FID'})
 
     fid = int(fid_hex, 16)
+
+    # 1) GET RESPONSE for file metadata
 
     # 1) GET RESPONSE for file metadata
     meta_resp = modem.crsm_get_response(fid)
@@ -217,15 +237,19 @@ def write_file():
 
 @app.route('/verify_adm', methods=['POST'])
 def verify_adm():
-    """ADM verification."""
+    """ADM verification — supports ADM1~4."""
     if not modem.is_connected:
         return jsonify({'success': False, 'error': 'Modem not connected'})
 
     adm_hex = request.json.get('adm', '').strip().replace(' ', '')
-    key_ref = request.json.get('key_ref', '0A')
+    adm_type = request.json.get('adm_type', 'ADM1')
 
     if len(adm_hex) != 16:
         return jsonify({'success': False, 'error': 'ADM must be 16 hex digits'})
+
+    # Map ADM type to key reference
+    key_ref_map = {'ADM1': '0A', 'ADM2': '0B', 'ADM3': '0C', 'ADM4': '0D'}
+    key_ref = key_ref_map.get(adm_type, '0A')
 
     r = modem.verify_adm(adm_hex, key_ref)
     r['log'] = [{'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()}]
@@ -250,6 +274,46 @@ def service_map():
             return jsonify({'success': False, 'error': 'Unknown service table'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/read_arr', methods=['POST'])
+def read_arr():
+    """Read EF.ARR files and decode records for access rule display."""
+    if not modem.is_connected:
+        return jsonify({'success': False, 'error': 'Modem not connected'})
+
+    results = {}
+    # MF/EF.ARR (2F06)
+    arr_files = [
+        {'path': 'MF/EF.ARR', 'fid': '2F06'},
+        {'path': 'ADF.USIM/EF.ARR', 'fid': '6F06'},
+    ]
+    for af in arr_files:
+        fid = int(af['fid'], 16)
+        meta_resp = modem.crsm_get_response(fid)
+        if not meta_resp['success'] or not meta_resp['data']:
+            continue
+        meta = parse_fcp(meta_resp['data'])
+        record_len = meta.get('record_len', 0)
+        num_records = meta.get('num_records', 0)
+        if not record_len or not num_records:
+            continue
+        records = []
+        for i in range(1, num_records + 1):
+            r = modem.crsm_read_record(fid, i, record_len)
+            if r['success']:
+                records.append(r['data'])
+            else:
+                records.append(None)
+        # Decode ARR records using pySim
+        decoded = decode_ef_records(af['path'], records)
+        results[af['path']] = {
+            'records_hex': records,
+            'decoded': decoded,
+            'num_records': num_records,
+        }
+
+    return jsonify({'success': True, 'arr': results})
 
 
 @app.route('/write_tlv', methods=['POST'])

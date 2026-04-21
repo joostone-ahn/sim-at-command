@@ -2,6 +2,12 @@
 # SIM AT Command Tool - One-click launcher (macOS/Linux)
 set -e
 
+echo ""
+echo "╔══════════════════════════════════════╗"
+echo "║  SIM AT Command Tool -- Web UI       ║"
+echo "╚══════════════════════════════════════╝"
+echo ""
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$DIR/.venv"
 PORT=8083

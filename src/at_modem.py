@@ -207,13 +207,23 @@ class ATModem:
 
     @staticmethod
     def list_ports() -> list[dict]:
-        """List available serial ports."""
+        """List available serial ports (USB/modem devices only, excludes Bluetooth/debug)."""
+        EXCLUDE = ('bluetooth', 'debug', 'wlan')
         ports = []
         for p in serial.tools.list_ports.comports():
+            dev_lower = p.device.lower()
+            # Skip known non-modem ports
+            if any(x in dev_lower for x in EXCLUDE):
+                continue
+            # Include if USB VID present OR device name contains 'usbmodem'
+            if p.vid is None and 'usbmodem' not in dev_lower:
+                continue
             ports.append({
                 'device': p.device,
                 'description': p.description,
                 'hwid': p.hwid,
+                'manufacturer': p.manufacturer or '',
+                'serial_number': p.serial_number or '',
             })
         return ports
 
@@ -315,11 +325,20 @@ def _parse_fcp_tlv(data: bytes) -> dict:
             else:
                 result['lifecycle'] = f'Unknown (0x{lcsi_byte:02X})'
         elif tag == 0x8B:  # Security attrib referenced
-            if len(value) >= 3:
+            # Short format (3 bytes): EF_ARR_FID(2) + record_nr(1)
+            # Long format (6 bytes): EF_ARR_FID(2) + SEID(1) + record_nr(1) + SEID_rec(1) + pad(1)
+            if len(value) >= 6:
+                arr_fid = f'{value[0]:02X}{value[1]:02X}'
+                arr_rec = value[3]
+                result['security'] = f'EF.ARR:{arr_fid} rec#{arr_rec}'
+                result['security_raw'] = value.hex()
+                result['arr_record_nr'] = arr_rec
+            elif len(value) >= 3:
                 arr_fid = f'{value[0]:02X}{value[1]:02X}'
                 arr_rec = value[2]
                 result['security'] = f'EF.ARR:{arr_fid} rec#{arr_rec}'
                 result['security_raw'] = value.hex()
+                result['arr_record_nr'] = arr_rec
             else:
                 result['security'] = value.hex()
                 result['security_raw'] = value.hex()

@@ -2,6 +2,12 @@
 REM SIM AT Command Tool - One-click launcher (Windows)
 setlocal
 
+echo.
+echo ========================================
+echo   SIM AT Command Tool -- Web UI
+echo ========================================
+echo.
+
 set DIR=%~dp0
 set VENV=%DIR%.venv
 set PORT=8083
