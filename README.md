@@ -6,11 +6,11 @@ A web-based tool for reading, writing, and decoding SIM/USIM card files via AT c
 
 ## Requirements
 
-- **Python 3.10+**
-- Device with USB modem port (Android DM+MODEM mode, or any device exposing AT modem via USB)
-- USB cable
-
-> All dependencies are installed automatically on first run.
+- [**Python 3.10+**](https://www.python.org/downloads/) — other dependencies are installed automatically on first run
+- [**Samsung USB Driver**](https://developer.samsung.com/android-usb-driver) — required for Samsung devices on Windows
+- **USB modem port** enabled on the device
+  - Samsung: Dial `*#0808#` → USB settings → **DM + MODEM + ADB**
+  - Samsung: Developer options → enable **3GPP AT**
 
 ---
 

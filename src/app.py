@@ -33,23 +33,26 @@ def index():
 def list_ports():
     """List available serial ports with ADB device model info."""
     ports = ATModem.list_ports()
-    adb_model = _get_adb_model()
-    return jsonify({'ports': ports, 'adb_model': adb_model})
+    adb_models = _get_adb_models()
+    return jsonify({'ports': ports, 'adb_models': adb_models})
 
 
-def _get_adb_model() -> str:
-    """Get connected Android device model via adb."""
+def _get_adb_models() -> dict:
+    """Get connected Android device models via adb. Returns {serial: model_name}."""
     import subprocess
+    models = {}
     try:
         r = subprocess.run(['adb', 'devices', '-l'], capture_output=True, text=True, timeout=5)
         for line in r.stdout.strip().split('\n')[1:]:
-            if 'model:' in line:
-                for part in line.split():
-                    if part.startswith('model:'):
-                        return part.split(':', 1)[1].replace('_', ' ')
+            if 'model:' not in line:
+                continue
+            serial = line.split()[0]
+            for part in line.split():
+                if part.startswith('model:'):
+                    models[serial] = part.split(':', 1)[1].replace('_', ' ')
     except Exception:
         pass
-    return ''
+    return models
 
 
 @app.route('/connect', methods=['POST'])

@@ -422,10 +422,13 @@ async function refreshPorts(){
     if(r.ports&&r.ports.length){
         // Sort: modem ports first
         r.ports.sort((a,b)=>{const aM=(a.device+' '+a.description).toLowerCase().includes('modem')?0:1;const bM=(b.device+' '+b.description).toLowerCase().includes('modem')?0:1;return aM-bM;});
-        const model=r.adb_model||'';
+        const models=r.adb_models||{};
         r.ports.forEach(p=>{const o=document.createElement('option');o.value=p.device;
             let label=`${p.device}  (${p.description})`;
-            if(model)label+=`  [${model}]`;
+            // Match ADB model by serial_number or device path containing serial
+            var matched='';
+            for(var sn in models){if(p.serial_number===sn||p.device.indexOf(sn)>=0){matched=models[sn];break;}}
+            if(matched)label+=`  [${matched}]`;
             o.textContent=label;sel.appendChild(o);});
         // Auto-select: prefer modem port
         const auto=r.ports.find(p=>(p.description+' '+p.device).toLowerCase().includes('modem'))||r.ports[0];
