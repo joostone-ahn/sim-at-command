@@ -215,7 +215,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 
 <!-- Write Popup -->
 <div id="writeOverlay" class="overlay" onclick="if(event.target===this)closeWritePopup()">
-<div class="popup" style="width:640px;height:70vh;display:flex;flex-direction:column;min-width:400px">
+<div class="popup" style="width:640px;max-height:70vh;display:flex;flex-direction:column;min-width:400px">
     <div class="panel-title" style="border-radius:12px 12px 0 0">
         <span>✏️ Write EF</span>
         <span id="writeEfName" style="margin-left:8px;font-weight:400;font-size:0.78rem;opacity:0.9"></span>
@@ -236,7 +236,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writeServiceList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writeServiceHex" style="display:none;flex:1">
-                <textarea id="writeServiceHexInput" rows="6" oninput="onServiceHexInput()" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+                <textarea id="writeServiceHexInput" rows="3" oninput="onServiceHexInput();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
             </div>
         </div>
         <div id="writePlmnSection" style="display:none;flex-direction:column;min-height:0;flex:1">
@@ -249,7 +249,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writePlmnList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writePlmnHex" style="display:none;flex:1">
-                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput()" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box"></textarea>
+                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
             </div>
         </div>
         <div id="writeAccSection" style="display:none">
@@ -259,7 +259,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="writeHexRow" style="flex:1;display:flex;flex-direction:column">
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span id="writeEfSize" style="font-weight:400;color:#888"></span></div>
             <div style="position:relative;flex:1">
-                <textarea id="writeHexInput" style="width:100%;height:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box" oninput="checkWriteChanged()"></textarea>
+                <textarea id="writeHexInput" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px" oninput="checkWriteChanged();autoResize(this)"></textarea>
                 <span id="writeHexCount" style="position:absolute;right:10px;bottom:8px;font-size:0.66rem;color:#bbb"></span>
             </div>
         </div>
@@ -269,7 +269,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                 <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Menlo,Consolas,monospace"></select>
             </div>
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span style="font-weight:400;color:#aaa;font-size:0.68rem">— Full TLV format: tag (80) + BER length + value</span></div>
-            <textarea id="writeTlvHexInput" rows="8" oninput="checkTlvChanged()" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical"></textarea>
+            <textarea id="writeTlvHexInput" rows="3" oninput="checkTlvChanged();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;overflow:hidden;min-height:60px"></textarea>
             <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
                 <button class="btn btn-primary" id="writeTlvWriteBtn" onclick="tlvWrite()" disabled style="padding:4px 10px;font-size:0.72rem;font-weight:600;min-width:80px">✏️ Write</button>
                 <span id="writeTlvStatus" style="font-size:0.72rem"></span>
@@ -588,7 +588,6 @@ async function doRead(){
     if(_isReading){_pendingRead=selectedFile;return;}
     _isReading=true;_pendingRead=null;
     const f=selectedFile;
-    apduLogMsg('SELECT '+f.name+' ('+f.fid+')');
     document.getElementById('detailEmpty').style.display='none';document.getElementById('detailContent').style.display='flex';
     document.getElementById('decodeView').innerHTML='<div style="color:#aaa;padding:20px;text-align:center;font-size:0.74rem">⏳ Reading...</div>';
     document.getElementById('rawView').innerHTML='';
@@ -851,6 +850,7 @@ function openWritePopup(){
     if(isTlv){loadTlvFromRaw();}
     if(isPlmn){document.getElementById('writePlmnSection').style.display='flex';renderPlmnEditor();}
     if(isAcc){document.getElementById('writeAccSection').style.display='block';renderAccEditor();}
+    setTimeout(function(){document.querySelectorAll('#writeOverlay textarea').forEach(function(t){autoResize(t);});},50);
 }
 function closeWritePopup(){document.getElementById('writeOverlay').classList.remove('show');}
 function onWriteRecordChange(){const r=readCache[selectedFile.path];const idx=parseInt(document.getElementById('writeRecordSelect').value);if(r&&Array.isArray(r.data)){writeOrigHex=(r.data[idx]||'').toUpperCase();document.getElementById('writeHexInput').value=writeOrigHex;document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeStatus').innerHTML='';}checkWriteChanged();}
@@ -861,12 +861,10 @@ async function submitWrite(){
     if(isPlmnFile(f.name)){const inputs=document.querySelectorAll('#writePlmnList input');const rows={};inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!rows[idx])rows[idx]={};rows[idx][field]=inp.value.trim();});for(const idx in rows){const e=rows[idx];if((e.mcc&&e.mcc.length>0)!==(e.mnc&&e.mnc.length>0)){document.getElementById('writeStatus').innerHTML=`<span style="color:#e74c3c">Row ${parseInt(idx)+1}: MCC and MNC must both be filled or both empty</span>`;return;}}}
     const hex=document.getElementById('writeHexInput').value.replace(/\s/g,'');const isLf=r.structure==='linear_fixed'||r.structure==='cyclic';const recNr=isLf?parseInt(document.getElementById('writeRecordSelect').value)+1:0;
     document.getElementById('writeStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeSubmitBtn').disabled=true;
-    apduLogMsg((isLf?'UPDATE RECORD':'UPDATE BINARY')+' '+f.name+' ('+f.fid+')'+(isLf?' rec#'+recNr:''));
     const wr=await api('/write',{path:f.path,fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
     await pollApduLog();
     if(wr.success){apduLogMsg('Write OK ✅');document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
-        apduLogMsg('RE-READ '+f.name+' ('+f.fid+')');
-        delete readCache[f.path];const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
+        delete readCache[f.path];const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);apduLogMsg('Re-read OK ✅');}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
         if(isPlmnFile(f.name)&&document.getElementById('writePlmnSection').style.display!=='none'){writeOrigHex=(readCache[f.path].data||hex).toUpperCase();renderPlmnEditor();}
     }else{await pollApduLog();apduLogMsg('Write failed ❌');document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
 }
@@ -882,7 +880,7 @@ async function renderServiceTable(){
     html+='</tbody></table>';document.getElementById('writeServiceList').innerHTML=html;
 }
 function onServiceChange(){const bits={};document.querySelectorAll('#writeServiceList select').forEach(s=>bits[parseInt(s.getAttribute('data-svc'))]=(s.value==='true'));let changed=false;for(const k in writeServiceOrig)if(!!bits[k]!==!!writeServiceOrig[k]){changed=true;break;}const newHex=bitsToHex(bits,Math.ceil(writeExpectedSize/2));document.getElementById('writeHexInput').value=newHex;document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';document.getElementById('writeSubmitBtn').disabled=!changed;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';document.getElementById('writeServiceHexInput').value=newHex;}
-function switchSvcMode(mode){const tbl=document.getElementById('writeServiceList'),hex=document.getElementById('writeServiceHex');const tBtn=document.getElementById('svcModeTable'),hBtn=document.getElementById('svcModeHex');if(mode==='hex'){tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');document.getElementById('writeServiceHexInput').value=document.getElementById('writeHexInput').value;}else{tbl.style.display='';tbl.style.flex='1';hex.style.display='none';hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');}}
+function switchSvcMode(mode){const tbl=document.getElementById('writeServiceList'),hex=document.getElementById('writeServiceHex');const tBtn=document.getElementById('svcModeTable'),hBtn=document.getElementById('svcModeHex');if(mode==='hex'){tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');document.getElementById('writeServiceHexInput').value=document.getElementById('writeHexInput').value;autoResize(document.getElementById('writeServiceHexInput'));}else{tbl.style.display='';tbl.style.flex='1';hex.style.display='none';hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');}}
 function onServiceHexInput(){const cur=document.getElementById('writeServiceHexInput').value.toUpperCase().replace(/\s/g,'');document.getElementById('writeHexInput').value=cur;document.getElementById('writeHexCount').textContent='('+cur.length+'/'+writeExpectedSize+')';const changed=cur!==writeOrigHex;let sizeOk=true;if(writeExpectedSize>0&&cur.length!==writeExpectedSize)sizeOk=false;document.getElementById('writeSubmitBtn').disabled=!changed||!sizeOk;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';}
 
 /* === PLMN Write === */
@@ -893,7 +891,7 @@ function renderPlmnEditor(){const f=selectedFile,r=readCache[f.path];if(!r||!r.d
     html+='</tbody></table>';document.getElementById('writePlmnList').innerHTML=html;}
 function plmnEditorToHex(){const f=selectedFile;const withAcT=hasAcT(f.name);const inputs=document.querySelectorAll('#writePlmnList input');const map={};inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!map[idx])map[idx]={mcc:'',mnc:'',act:''};map[idx][field]=inp.value.trim();});let hex='';Object.keys(map).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(idx=>{const e=map[idx];if(!e.mcc&&!e.mnc){hex+=withAcT?'FFFFFF0000':'FFFFFF';}else{hex+=encodePlmn(e.mcc,e.mnc);if(withAcT)hex+=(e.act||'0000').padEnd(4,'0');}});return hex.toUpperCase();}
 function onPlmnEdit(){const newHex=plmnEditorToHex();document.getElementById('writeHexInput').value=newHex;writeExpectedSize=writeOrigHex.length;document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';const changed=newHex!==writeOrigHex;document.getElementById('writeSubmitBtn').disabled=!changed;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';document.getElementById('writePlmnHexInput').value=newHex;}
-function switchPlmnMode(mode){const tbl=document.getElementById('writePlmnList'),hex=document.getElementById('writePlmnHex');const tBtn=document.getElementById('plmnModeTable'),hBtn=document.getElementById('plmnModeHex');if(mode==='hex'){tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');document.getElementById('writePlmnHexInput').value=document.getElementById('writeHexInput').value;}else{tbl.style.display='';tbl.style.flex='1';hex.style.display='none';hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');}}
+function switchPlmnMode(mode){const tbl=document.getElementById('writePlmnList'),hex=document.getElementById('writePlmnHex');const tBtn=document.getElementById('plmnModeTable'),hBtn=document.getElementById('plmnModeHex');if(mode==='hex'){tbl.style.display='none';hex.style.display='flex';hex.style.flex='1';tBtn.classList.remove('svc-mode-active');hBtn.classList.add('svc-mode-active');document.getElementById('writePlmnHexInput').value=document.getElementById('writeHexInput').value;autoResize(document.getElementById('writePlmnHexInput'));}else{tbl.style.display='';tbl.style.flex='1';hex.style.display='none';hBtn.classList.remove('svc-mode-active');tBtn.classList.add('svc-mode-active');}}
 function onPlmnHexInput(){const cur=document.getElementById('writePlmnHexInput').value.toUpperCase().replace(/\s/g,'');document.getElementById('writeHexInput').value=cur;writeExpectedSize=writeOrigHex.length;document.getElementById('writeHexCount').textContent='('+cur.length+'/'+writeExpectedSize+')';const changed=cur!==writeOrigHex;let sizeOk=true;if(writeExpectedSize>0&&cur.length!==writeExpectedSize)sizeOk=false;document.getElementById('writeSubmitBtn').disabled=!changed||!sizeOk;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';}
 
 /* === ACC Write === */
@@ -914,12 +912,10 @@ async function tlvWrite(){
     var i=tagHex.length;var lenByte=parseInt(data.substr(i,2),16);i+=2;var expectedLen=0;if(lenByte<=0x7F){expectedLen=lenByte;}else if(lenByte===0x81){expectedLen=parseInt(data.substr(i,2),16);i+=2;}else if(lenByte===0x82){expectedLen=parseInt(data.substr(i,4),16);i+=4;}var actualLen=(data.length-i)/2;
     if(actualLen!==expectedLen){document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Length mismatch: expected ${expectedLen} bytes, got ${actualLen} bytes</span>`;return;}
     document.getElementById('writeTlvStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeTlvWriteBtn').disabled=true;
-    apduLogMsg('SELECT '+selectedFile.name+' ('+selectedFile.fid+')');
     const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
     await pollApduLog();
     if(wr.success){apduLogMsg('SET DATA OK ✅');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
-        apduLogMsg('RE-READ '+selectedFile.name+' ('+selectedFile.fid+')');
-        delete readCache[selectedFile.path];const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);}
+        delete readCache[selectedFile.path];const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('Re-read OK ✅');}
     }else{await pollApduLog();apduLogMsg('SET DATA failed ❌');document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
 }
 
@@ -1001,6 +997,7 @@ function _fmtHexBlockRx(hex,indent,sw){
 async function clearApduLog(){document.getElementById('apduLog').innerHTML='';await api('/apdu_log_clear',{});_apduLogIdx=0;}
 function copyApduLog(btn){var el=document.getElementById('apduLog');navigator.clipboard.writeText(el.innerText||el.textContent||'');if(btn){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);}}
 function apduLogMsg(msg){var el=document.getElementById('apduLog');var d=document.createElement('div');d.style.cssText='color:#667eea;font-style:italic;padding:1px 0';d.textContent='── '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function autoResize(el){el.style.height='auto';el.style.height=Math.max(60,el.scrollHeight)+'px';}
 
 /* === Init === */
 refreshPorts();

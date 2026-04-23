@@ -10,7 +10,7 @@ from flask import Flask, render_template, request, jsonify
 
 sys.path.insert(0, str(Path(__file__).parent))
 from at_modem import ATModem, parse_fcp, _cla_for_lchan
-from sim_files import build_file_tree
+from sim_files import build_file_tree, get_file_by_path
 from decoder import decode_ef, decode_ef_records
 
 app = Flask(__name__)
@@ -308,6 +308,7 @@ def write_file():
 
     # SELECT the file first
     if path:
+        modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
         sel = _select_file_chain(path, lchan=lchan)
         if not sel['success']:
             sel['log'] = [{'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()}]
@@ -318,8 +319,10 @@ def write_file():
     data_len = len(hex_data) // 2
     if structure in ('linear_fixed', 'cyclic') and record_nr > 0:
         rl = record_len or data_len
+        modem._log_apdu('msg', f'UPDATE RECORD #{record_nr} ({rl} bytes)')
         apdu = f'{cla:02X}DC{record_nr:02X}04{rl:02X}{hex_data}'
     else:
+        modem._log_apdu('msg', f'UPDATE BINARY ({data_len} bytes)')
         apdu = f'{cla:02X}D60000{data_len:02X}{hex_data}'
     r = modem.csim_send(apdu)
     log_lines = [{'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()}]
@@ -498,17 +501,18 @@ def write_tlv():
 
     lchan = isim_lchan if is_isim else usim_lchan
 
+    modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
     select_results = _select_file_chain(path, lchan=lchan)
     if not select_results['success']:
         return jsonify(select_results)
 
     cla = _cla_for_lchan(lchan, proprietary=True)
-    modem._log_apdu('msg', 'DELETE DATA tag=' + tag_hex)
+    modem._log_apdu('msg', 'DELETE DATA (tag=0x' + tag_hex + ')')
     del_apdu = f'{cla:02X}DB0080{len(tag_hex)//2:02X}{tag_hex}'
     modem.csim_send(del_apdu)
 
     if data:
-        modem._log_apdu('msg', 'SET DATA tag=' + tag_hex)
+        modem._log_apdu('msg', 'SET DATA (tag=0x' + tag_hex + ')')
         val_len = len(data) // 2
         if val_len <= 0x7F:
             ber_len = f'{val_len:02X}'
@@ -546,6 +550,7 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
     lchan = isim_lchan if is_isim else usim_lchan
 
     # Step 1: SELECT file chain
+    modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
     select_result = _select_file_chain(path, lchan=lchan)
     if not select_result['success']:
         return jsonify({
@@ -572,7 +577,7 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
 
     # Step 3: Read based on structure
     if actual_structure == 'ber_tlv':
-        modem._log_apdu('msg', 'RETRIEVE DATA')
+        modem._log_apdu('msg', 'RETRIEVE DATA (tag=0x80)')
         cla = _cla_for_lchan(lchan, proprietary=True)
         retrieve_apdu = f'{cla:02X}CB0080018000'
         r = modem.csim_send(retrieve_apdu)
@@ -668,7 +673,8 @@ def _read_file_ccho(path: str, fid_hex: str, structure: str) -> 'Response':
                 else:
                     return jsonify({'success': False, 'error': f'Unknown file: {part}'})
 
-        # SELECT by path via CGLA (CLA=00, no channel encoding needed)
+        # SELECT by path via CGLA
+        modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
         lc = len(fid_path) // 2
         sel = modem.cgla_send(session, f'00A40804{lc:02X}{fid_path}')
         log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
@@ -696,7 +702,7 @@ def _read_file_ccho(path: str, fid_hex: str, structure: str) -> 'Response':
 
         # Read based on structure
         if actual_structure == 'ber_tlv':
-            modem._log_apdu('msg', 'RETRIEVE DATA')
+            modem._log_apdu('msg', 'RETRIEVE DATA (tag=0x80)')
             r = modem.cgla_send(session, '80CB0080018000')
             log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
             all_data = r.get('data', '')
@@ -802,6 +808,7 @@ def _write_file_ccho(path: str, fid_hex: str, structure: str,
                 if fid:
                     fid_path += fid
         lc = len(fid_path) // 2
+        modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
         sel = modem.cgla_send(session, f'00A40804{lc:02X}{fid_path}')
         sw = sel.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
@@ -810,8 +817,10 @@ def _write_file_ccho(path: str, fid_hex: str, structure: str,
         data_len = len(hex_data) // 2
         if structure in ('linear_fixed', 'cyclic') and record_nr > 0:
             rl = record_len or data_len
+            modem._log_apdu('msg', f'UPDATE RECORD #{record_nr}')
             apdu = f'00DC{record_nr:02X}04{rl:02X}{hex_data}'
         else:
+            modem._log_apdu('msg', f'UPDATE BINARY ({data_len} bytes)')
             apdu = f'00D60000{data_len:02X}{hex_data}'
         r = modem.cgla_send(session, apdu)
         sw = r.get('sw', '')
@@ -843,17 +852,18 @@ def _write_tlv_ccho(path: str, tag_hex: str, data: str) -> 'Response':
                 if fid:
                     fid_path += fid
         lc = len(fid_path) // 2
+        modem._log_apdu('msg', 'SELECT ' + path.split('/')[-1] + ' (' + (get_file_by_path(path) or {}).get('fid','') + ')')
         sel = modem.cgla_send(session, f'00A40804{lc:02X}{fid_path}')
         sw = sel.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
             return jsonify({'success': False, 'error': f'SELECT failed: SW={sw}', 'sw': sw})
         # DELETE existing tag
-        modem._log_apdu('msg', 'DELETE DATA tag=' + tag_hex)
+        modem._log_apdu('msg', 'DELETE DATA (tag=0x' + tag_hex + ')')
         del_apdu = f'80DB0080{len(tag_hex)//2:02X}{tag_hex}'
         modem.cgla_send(session, del_apdu)
         # SET DATA
         if data:
-            modem._log_apdu('msg', 'SET DATA tag=' + tag_hex)
+            modem._log_apdu('msg', 'SET DATA (tag=0x' + tag_hex + ')')
             val_len = len(data) // 2
             if val_len <= 0x7F:
                 ber_len = f'{val_len:02X}'
