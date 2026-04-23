@@ -83,13 +83,18 @@ Click **Write** to open the editor popup:
 
 ## Modem Compatibility
 
-| Feature | Qualcomm | MediaTek |
-|---|---|---|
-| AT+CSIM | ✅ | ✅ |
-| Logical channel (CLA) | ✅ (channel scan) | ❌ (ignored) |
-| AID SELECT | ✅ (but not used) | ❌ (CME ERROR) |
-| ISIM access | Via scanned channel | Via AT+CCHO/CGLA fallback |
-| Extended channels (4–19) | Depends on modem | ❌ (6E00) |
+| Feature | Qualcomm | Samsung LSI | MediaTek |
+|---|---|---|---|
+| AT+CSIM | ✅ | ✅ | ✅ |
+| Logical channel scan | ✅ | ✅ (NOTE1) | ❌ |
+| AID SELECT | ✅ | ✅ | ❌ |
+| AT+CCHO/CGLA | ✅ | ✅ | ✅ |
+| Extended channels (4–19) | ✅ | ❌ | ❌ |
+| ISIM access | Channel scan | Channel scan | AT+CCHO/CGLA fallback (NOTE2) |
+
+> **NOTE1:** Samsung LSI STATUS (INS=F2) responds only to proprietary class (CLA bit8=1, e.g. 80/81) per ISO 7816-4 Section 5.4.1. Standard interindustry class (CLA bit8=0, e.g. 00/01) returns 6E00 (class not supported). This does not affect functionality since the tool uses proprietary CLA for channel scanning.
+
+> **NOTE2:** AT+CSIM (3GPP TS 27.007 Section 8.17) sends a raw APDU directly to the UICC — the app must manage logical channels via the CLA byte. AT+CCHO (Section 8.45) opens a logical channel by AID and returns a session ID, then AT+CGLA (Section 8.46) sends APDUs on that session — the modem manages channel assignment internally. This tool uses AT+CSIM with channel scan as the primary method, and falls back to AT+CCHO/CGLA only for ISIM access on modems (e.g. MediaTek) where logical channel scan is not supported.
 
 ---
 
