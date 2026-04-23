@@ -107,17 +107,15 @@ class ATModem:
             return {'success': False, 'error': str(e)}
 
     def csim_send(self, apdu_hex: str) -> dict:
-        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE).
-        Skips GET RESPONSE for SELECT (INS=A4) to preserve card context."""
+        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE)."""
         length = len(apdu_hex)
         cmd = f'AT+CSIM={length},"{apdu_hex}"'
         self._log_apdu('tx', apdu_hex)
         resp = self._send(cmd)
         result = self._parse_csim(resp)
         sw = result.get('sw', '')
-        # Auto GET RESPONSE for SW 61xx — but NOT for SELECT commands
-        ins = apdu_hex[2:4].upper() if len(apdu_hex) >= 4 else ''
-        if sw.startswith('61') and ins != 'A4':
+        # Auto GET RESPONSE for SW 61xx
+        if sw.startswith('61'):
             le = sw[2:4]
             orig_cla = int(apdu_hex[:2], 16)
             if orig_cla & 0x40:
@@ -130,14 +128,7 @@ class ATModem:
             result2['data'] = result.get('data', '') + result2.get('data', '')
             self._log_apdu('rx', result2.get('data', ''), result2.get('sw', ''))
             return result2
-        # Treat 61xx as success for SELECT (FCP available but not fetched)
-        if sw.startswith('61') and ins == 'A4':
-            result['success'] = True
         self._log_apdu('rx', result.get('data', ''), sw)
-        return result
-        # Treat 61xx as success for SELECT (FCP available but not fetched)
-        if sw.startswith('61') and ins == 'A4':
-            result['success'] = True
         return result
 
     def scan_channels(self, aids: list[str]) -> dict:
@@ -188,11 +179,9 @@ class ATModem:
         if length <= 255:
             apdu = f'{cla:02X}B00000{length:02X}'
             r = self.csim_send(apdu)
-            # Trim response to requested length (some modems return more)
             data = r.get('data', '')
             if len(data) > length * 2:
                 r['data'] = data[:length * 2]
-                # Update last log entry with trimmed data
                 if self.apdu_log and self.apdu_log[-1]['dir'] == 'rx':
                     self.apdu_log[-1]['data'] = r['data']
             return r
@@ -228,12 +217,6 @@ class ATModem:
             if self.apdu_log and self.apdu_log[-1]['dir'] == 'rx':
                 self.apdu_log[-1]['data'] = r['data']
         return r
-
-    def _get_response(self, sw: str, lchan: int = 0) -> dict:
-        """Send GET RESPONSE for 61xx SW. Returns parsed result with FCP data."""
-        le = sw[2:4]
-        cla = f'{_cla_for_lchan(lchan):02X}'
-        return self.csim_send(f'{cla}C00000{le}')
 
     # ── AT+CCHO/CGLA session-based access (fallback for modems without lchan support) ──
 
@@ -295,11 +278,7 @@ class ATModem:
         sw = r.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
             return aids
-        # GET RESPONSE for FCP if 61xx
         fcp_data = r.get('data', '')
-        if sw.startswith('61') and not fcp_data:
-            r2 = self._get_response(sw)
-            fcp_data = r2.get('data', '')
         if not fcp_data:
             return aids
         meta = parse_fcp(fcp_data)

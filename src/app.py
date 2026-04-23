@@ -143,11 +143,7 @@ def read_info():
         # Read ICCID (MF/2FE2, transparent)
         sel = _select_file_chain('MF/EF.ICCID', lchan=lchan)
         if sel.get('success'):
-            sw = sel.get('sw', '')
             fcp = sel.get('fcp', '')
-            if sw.startswith('61') and not fcp:
-                fcp_r = modem._get_response(sw, lchan=lchan)
-                fcp = fcp_r.get('data', '')
             iccid_meta = parse_fcp(fcp) if fcp else {}
             fs = iccid_meta.get('file_size', 10)
             r = modem.csim_read_binary(fs, lchan=lchan)
@@ -159,11 +155,7 @@ def read_info():
     try:
         sel = _select_file_chain('ADF.USIM/EF.IMSI', lchan=lchan)
         if sel.get('success'):
-            sw = sel.get('sw', '')
             fcp = sel.get('fcp', '')
-            if sw.startswith('61') and not fcp:
-                fcp_r = modem._get_response(sw, lchan=lchan)
-                fcp = fcp_r.get('data', '')
             imsi_meta = parse_fcp(fcp) if fcp else {}
             fs = imsi_meta.get('file_size', 9)
             r = modem.csim_read_binary(fs, lchan=lchan)
@@ -175,11 +167,7 @@ def read_info():
     try:
         sel = _select_file_chain('ADF.USIM/EF.MSISDN', lchan=lchan)
         if sel.get('success'):
-            sw = sel.get('sw', '')
             fcp = sel.get('fcp', '')
-            if sw.startswith('61') and not fcp:
-                fcp_r = modem._get_response(sw, lchan=lchan)
-                fcp = fcp_r.get('data', '')
             msisdn_meta = parse_fcp(fcp) if fcp else {}
             msisdn_reclen = msisdn_meta.get('record_len', 0)
             if msisdn_reclen:
@@ -317,15 +305,29 @@ def write_file():
     # UPDATE via CSIM on correct logical channel
     cla = _cla_for_lchan(lchan)
     data_len = len(hex_data) // 2
+    log_lines = []
     if structure in ('linear_fixed', 'cyclic') and record_nr > 0:
         rl = record_len or data_len
         modem._log_apdu('msg', f'UPDATE RECORD #{record_nr} ({rl} bytes)')
         apdu = f'{cla:02X}DC{record_nr:02X}04{rl:02X}{hex_data}'
+        r = modem.csim_send(apdu)
+        log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
     else:
         modem._log_apdu('msg', f'UPDATE BINARY ({data_len} bytes)')
-        apdu = f'{cla:02X}D60000{data_len:02X}{hex_data}'
-    r = modem.csim_send(apdu)
-    log_lines = [{'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()}]
+        # Split into 255-byte chunks
+        offset = 0
+        r = {'success': True, 'sw': '9000'}
+        while offset < data_len:
+            chunk_len = min(255, data_len - offset)
+            p1 = (offset >> 8) & 0xFF
+            p2 = offset & 0xFF
+            chunk_hex = hex_data[offset*2:(offset+chunk_len)*2]
+            apdu = f'{cla:02X}D6{p1:02X}{p2:02X}{chunk_len:02X}{chunk_hex}'
+            r = modem.csim_send(apdu)
+            log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
+            if not r.get('sw', '').startswith('90'):
+                break
+            offset += chunk_len
     sw = r.get('sw', '')
     success = sw.startswith('90')
     result = {'success': success, 'sw': sw, 'log': log_lines}
@@ -388,12 +390,7 @@ def read_arr():
         sel = _select_file_chain(af['path'])
         if not sel['success']:
             continue
-        # GET RESPONSE for FCP if 61xx
         fcp_data = sel.get('fcp', '')
-        sel_sw = sel.get('sw', '')
-        if sel_sw.startswith('61') and not fcp_data:
-            fcp_resp = modem._get_response(sel_sw)
-            fcp_data = fcp_resp.get('data', '')
         if not fcp_data:
             continue
         meta = parse_fcp(fcp_data)
@@ -411,6 +408,7 @@ def read_arr():
         decoded = decode_ef_records(af['path'], records)
         results[af['path']] = {
             'records_hex': records, 'decoded': decoded, 'num_records': num_records,
+            'meta': meta,
         }
 
     # ISIM ARR — use scanned ISIM channel or CCHO fallback
@@ -442,7 +440,7 @@ def read_arr():
                                 decoded = decode_ef_records('ADF.ISIM/EF.ARR', records)
                                 results['ADF.ISIM/EF.ARR'] = {
                                     'records_hex': records, 'decoded': decoded,
-                                    'num_records': num_records,
+                                    'num_records': num_records, 'meta': meta,
                                 }
                     finally:
                         modem.ccho_close(session)
@@ -451,10 +449,6 @@ def read_arr():
                 sel = _select_file_chain('ADF.ISIM/EF.ARR', lchan=isim_lchan)
                 if sel.get('success'):
                     fcp_data = sel.get('fcp', '')
-                    sel_sw = sel.get('sw', '')
-                    if sel_sw.startswith('61') and not fcp_data:
-                        fcp_resp = modem._get_response(sel_sw, lchan=isim_lchan)
-                        fcp_data = fcp_resp.get('data', '')
                     if fcp_data:
                         meta = parse_fcp(fcp_data)
                         record_len = meta.get('record_len', 0)
@@ -470,7 +464,7 @@ def read_arr():
                             decoded = decode_ef_records('ADF.ISIM/EF.ARR', records)
                             results['ADF.ISIM/EF.ARR'] = {
                                 'records_hex': records, 'decoded': decoded,
-                                'num_records': num_records,
+                                'num_records': num_records, 'meta': meta,
                             }
         except Exception as e:
             logger.warning("[ARR] ISIM ARR read failed: %s", e)
@@ -560,13 +554,9 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
             'log': log_lines,
         })
 
-    # Step 2: GET RESPONSE for FCP (skip for BER-TLV to preserve context)
+    # Step 2: Parse FCP from SELECT response
     meta = {}
-    select_sw = select_result.get('sw', '')
     fcp_data = select_result.get('fcp', '')
-    if structure != 'ber_tlv' and select_sw.startswith('61') and not fcp_data:
-        fcp_resp = modem._get_response(select_sw, lchan=lchan)
-        fcp_data = fcp_resp.get('data', '')
     if fcp_data:
         meta = parse_fcp(fcp_data)
 
@@ -731,7 +721,7 @@ def _read_file_ccho(path: str, fid_hex: str, structure: str) -> 'Response':
                     'error': f'No record length info (meta: {json.dumps(meta)})',
                     'meta': meta, 'log': log_lines,
                 })
-                records = []
+            records = []
             for i in range(1, (num_records or 1) + 1):
                 modem._log_apdu('msg', f'READ RECORD #{i} ({record_len} bytes)')
                 r = modem.cgla_send(session, f'00B2{i:02X}04{record_len:02X}')
@@ -817,12 +807,21 @@ def _write_file_ccho(path: str, fid_hex: str, structure: str,
         data_len = len(hex_data) // 2
         if structure in ('linear_fixed', 'cyclic') and record_nr > 0:
             rl = record_len or data_len
-            modem._log_apdu('msg', f'UPDATE RECORD #{record_nr}')
-            apdu = f'00DC{record_nr:02X}04{rl:02X}{hex_data}'
+            modem._log_apdu('msg', f'UPDATE RECORD #{record_nr} ({rl} bytes)')
+            r = modem.cgla_send(session, f'00DC{record_nr:02X}04{rl:02X}{hex_data}')
         else:
             modem._log_apdu('msg', f'UPDATE BINARY ({data_len} bytes)')
-            apdu = f'00D60000{data_len:02X}{hex_data}'
-        r = modem.cgla_send(session, apdu)
+            offset = 0
+            r = {'success': True, 'sw': '9000'}
+            while offset < data_len:
+                chunk_len = min(255, data_len - offset)
+                p1 = (offset >> 8) & 0xFF
+                p2 = offset & 0xFF
+                chunk_hex = hex_data[offset*2:(offset+chunk_len)*2]
+                r = modem.cgla_send(session, f'00D6{p1:02X}{p2:02X}{chunk_len:02X}{chunk_hex}')
+                if not r.get('sw', '').startswith('90'):
+                    break
+                offset += chunk_len
         sw = r.get('sw', '')
         success = sw.startswith('90')
         result = {'success': success, 'sw': sw}

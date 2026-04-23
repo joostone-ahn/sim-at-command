@@ -433,6 +433,9 @@ function updateDetailButtons(f,r){
     }else if(isNever){
         btnWrite.disabled=true;
         btnWrite.setAttribute('data-tip','🚫 Write not allowed (NEVER)');
+    }else if(!writeCond){
+        btnWrite.disabled=true;
+        btnWrite.setAttribute('data-tip','🔐 ARR info not available');
     }else if(isError){
         btnWrite.disabled=true;
         btnWrite.setAttribute('data-tip','⚠️ Read failed — cannot write');
@@ -507,7 +510,7 @@ async function doConnect(){
 }
 async function doDisconnect(){
     await api('/disconnect',{});setBadge('connectStatus','','');
-    document.getElementById('btnConnect').style.display='';document.getElementById('btnDisconnect').style.display='none';document.getElementById('portSelect').disabled=false;
+    document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';document.getElementById('btnDisconnect').style.display='none';document.getElementById('portSelect').disabled=false;
     admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
     arrData={};hasIsim=false;hasUsim=false;
     document.getElementById('admArea').style.display='none';
@@ -539,7 +542,7 @@ async function loadArrData(){
                     decoded:a.decoded,
                     record_len:a.records_hex&&a.records_hex[0]?a.records_hex[0].length/2:0,
                     num_records:a.num_records,
-                    meta:{}
+                    meta:a.meta||{}
                 };
             }
         }
@@ -864,7 +867,7 @@ async function submitWrite(){
     const wr=await api('/write',{path:f.path,fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
     await pollApduLog();
     if(wr.success){apduLogMsg('Write OK ✅');document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
-        delete readCache[f.path];const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);apduLogMsg('Re-read OK ✅');}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
+        delete readCache[f.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);apduLogMsg('Re-read OK ✅');}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
         if(isPlmnFile(f.name)&&document.getElementById('writePlmnSection').style.display!=='none'){writeOrigHex=(readCache[f.path].data||hex).toUpperCase();renderPlmnEditor();}
     }else{await pollApduLog();apduLogMsg('Write failed ❌');document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
 }
@@ -915,7 +918,7 @@ async function tlvWrite(){
     const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
     await pollApduLog();
     if(wr.success){apduLogMsg('SET DATA OK ✅');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
-        delete readCache[selectedFile.path];const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('Re-read OK ✅');}
+        delete readCache[selectedFile.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('Re-read OK ✅');}
     }else{await pollApduLog();apduLogMsg('SET DATA failed ❌');document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
 }
 
