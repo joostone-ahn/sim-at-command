@@ -24,15 +24,15 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
 select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .status-badge{font-size:0.72rem;padding:3px 8px;border-radius:4px;font-weight:600}
 .status-ok{background:#d4edda;color:#155724}.status-err{background:#f8d7da;color:#721c24}.status-warn{background:#fff3cd;color:#856404}
-.setup-label{font-size:0.74rem;font-weight:600;color:#888;min-width:80px;text-align:center}
-.main-content{flex:1;display:flex;gap:8px;min-height:0;overflow:hidden}
+.setup-label{font-size:0.74rem;font-weight:600;color:#888;min-width:60px;text-align:center}
+.main-content{flex:1;display:flex;gap:6px;min-height:0;overflow:hidden}
 .card{background:rgba(255,255,255,0.95);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;flex-direction:column;overflow:hidden}
 .panel-title{background:linear-gradient(45deg,#667eea,#764ba2);color:white;padding:8px 14px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .panel-title .count{font-size:0.68rem;font-weight:400;opacity:0.8;margin-left:4px}
 .file-tree{flex:1;overflow-y:auto;padding:2px 0}
 .file-tree::-webkit-scrollbar{width:6px}.file-tree::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
 .tree-group{margin-bottom:1px}
-.tree-group-header{padding:5px 12px;font-size:0.72rem;font-weight:700;color:#667eea;background:#f0f4ff;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+.tree-group-header{padding:5px 12px;font-size:0.72rem;font-weight:700;color:#667eea;background:#f0f4ff;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;height:28px;line-height:28px}
 .tree-group-header:hover{background:#e8ecf8}
 .tree-group-arrow{font-size:0.6rem;transition:transform 0.2s;width:12px;text-align:center;color:#999}
 .tree-group-arrow.open{transform:rotate(90deg)}
@@ -50,7 +50,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .detail-meta dt{color:#888;font-weight:600}.detail-meta dd{color:#333;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
 .hex-display{background:#fff;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;color:#2c3e50;word-break:break-all;line-height:1.5;white-space:pre-wrap;padding:15px 15px 15px 20px;border:none;border-radius:0}
 .rec-table{width:auto;border-collapse:collapse;font-size:0.74rem}
-.rec-table th{background:#f0f4ff;color:#667eea;padding:4px 8px;text-align:left;font-weight:600;position:sticky;top:0;border-bottom:1px solid #e0e0e0;z-index:1;white-space:nowrap}
+.rec-table th{background:#f0f4ff;color:#667eea;padding:3px 8px;text-align:left;font-weight:600;position:sticky;top:0;border-bottom:1px solid #e0e0e0;z-index:1;white-space:nowrap}
 .rec-table th:first-child{text-align:center;width:38px}
 .rec-table td{padding:3px 8px;border-bottom:1px solid #f0f0f0;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;color:#333;white-space:nowrap}
 .rec-table td:first-child{color:#667eea;font-weight:600;width:38px;text-align:center}
@@ -75,9 +75,9 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .search-ph::placeholder{color:rgba(255,255,255,0.4);font-style:italic}
 .detail-section{margin-bottom:0;background:#fff;border-bottom:1px solid #e9ecef;overflow:hidden}
 .detail-section:last-child{border-bottom:none}
-.detail-section-title{font-size:0.80rem;font-weight:700;color:#667eea;padding:8px 12px;background:#f8f9ff;border-bottom:1px solid #e9ecef;margin-bottom:0}
+.detail-section-title{font-size:0.80rem;font-weight:700;color:#667eea;padding:8px 12px;background:#fff;border-bottom:1px solid #e9ecef;margin-bottom:0}
 .tree-display{font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;white-space:pre;line-height:1.3;color:#333;padding:15px 15px 15px 20px}
-.data-wrap{background:#f8f9fa;border-radius:6px;display:inline-block}
+.data-wrap{background:#fff;border-radius:6px;display:inline-block}
 </style>
 </head>
 <body>
@@ -85,33 +85,59 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
     <div class="header">
         <h1>📡 SIM AT Command Tool</h1>
     </div>
-    <div class="header" style="padding:8px 20px;margin-bottom:8px">
-        <span class="setup-label" style="text-align:center">Serial Port</span>
-        <select id="portSelect" class="input-sm" style="min-width:300px"></select>
-        <button class="btn btn-dark" onclick="refreshPorts()">🔄 Refresh</button>
-        <button class="btn btn-primary" id="btnConnect" onclick="doConnect()" style="width:110px">🔌 Connect</button>
-        <button class="btn btn-danger" id="btnDisconnect" onclick="doDisconnect()" style="display:none;width:110px">⏏ Disconnect</button>
+    <div class="header" style="padding:8px 20px;margin-bottom:5px;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
+            <span class="setup-label">Serial Port</span>
+            <select id="portSelect" class="input-sm" style="min-width:300px;height:22px;padding:1px 8px;font-size:0.72rem"></select>
+            <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
+            <button class="btn btn-dark" onclick="refreshPorts()" style="height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">🔄 Refresh</button>
+            <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
+            <button class="btn btn-primary" id="btnConnect" onclick="doConnect()" style="height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">🔌 Connect</button>
+            <button class="btn btn-danger" id="btnDisconnect" onclick="doDisconnect()" style="display:none;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">⏏ Disconnect</button>
+        </div>
         <span id="connectStatus" class="status-badge" style="display:none"></span>
-        <div id="admArea" style="display:none;margin-left:auto;align-items:center;gap:8px">
-            <button class="btn" id="btnAdm" onclick="openAdmPopup()" style="white-space:nowrap;height:26px;font-size:0.68rem;background:#f0f2f5;color:#555;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0 10px">🔐 VERIFY ADM</button>
-            <div style="width:1px;background:#ddd;height:18px;flex-shrink:0"></div>
-            <div id="admDotsArea" style="display:flex;align-items:center;gap:6px;font-size:0.60rem;font-family:Consolas,monospace;color:#888">
-                <span><span id="admDot1" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ccc;margin-right:2px;vertical-align:middle"></span>ADM1</span>
-                <span><span id="admDot2" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ccc;margin-right:2px;vertical-align:middle"></span>ADM2</span>
-                <span><span id="admDot3" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ccc;margin-right:2px;vertical-align:middle"></span>ADM3</span>
-                <span><span id="admDot4" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ccc;margin-right:2px;vertical-align:middle"></span>ADM4</span>
+        <div id="simInfoArea" style="display:none;align-items:center;gap:10px">
+            <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
+                <span id="simIccid" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
+                <div id="simIccidSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0;display:none"></div>
+                <span id="simImsi" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
+                <div id="simMsisdnSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
+                <span id="simMsisdn" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
             </div>
-            <div style="width:1px;background:#ddd;height:18px;flex-shrink:0"></div>
+        </div>
+        <div id="admArea" style="display:none;align-items:center;gap:10px">
+            <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
+                <button class="btn" id="btnAdm" onclick="openAdmPopup()" style="white-space:nowrap;height:22px;font-size:0.68rem;background:#f0f2f5;color:#555;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0 10px;line-height:22px;box-sizing:border-box">🔐 VERIFY ADM</button>
+                <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
+                <div id="admDotsArea" style="display:flex;align-items:center;gap:8px;font-size:0.70rem;font-family:Consolas,monospace;color:#666">
+                    <span><span id="admDot1" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM1</span>
+                    <span><span id="admDot2" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM2</span>
+                    <span><span id="admDot3" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM3</span>
+                    <span><span id="admDot4" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM4</span>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="card" style="padding:12px;margin-bottom:0;flex:1;display:flex;flex-direction:column;min-height:0">
-    <div class="main-content" id="mainContent" style="display:none">
-        <div class="card" id="leftPanel" style="flex:3;min-width:220px">
+    <div class="card" style="padding:8px;margin-bottom:0;flex:1;display:flex;flex-direction:column;min-height:0">
+    <div class="main-content" id="mainContent">
+        <div class="card" id="apduPanel" style="flex:2;min-width:205px;max-width:365px;display:flex;flex-direction:column;overflow:hidden">
             <div class="panel-title" style="min-height:36px;padding:6px 12px">
-                <span>🗂️ SIM Files</span><span class="count" id="fileCount"></span>
+                <span>💻 APDU Log</span>
+                <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+                    <button class="btn btn-dark" onclick="copyApduLog(this)" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:2px 8px;font-size:0.66rem;min-width:50px">📋 Copy</button>
+                    <button class="btn btn-dark" onclick="clearApduLog()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:2px 8px;font-size:0.66rem;min-width:50px">🗑 Clear</button>
+                </div>
+            </div>
+            <div id="apduLog" style="flex:1;overflow-y:auto;background:#fff;padding:2px 10px;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.72rem;line-height:1.3;color:#333"></div>
+        </div>
+        <div class="card" id="leftPanel" style="flex:2;min-width:205px;max-width:365px;display:flex;flex-direction:column">
+            <div class="panel-title" style="min-height:36px;padding:6px 12px">
+                <span>🗂️ SIM Files</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-                    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:5px;padding:2px 8px;height:24px;width:220px">
-                        <span style="font-size:0.66rem;font-weight:600;color:rgba(255,255,255,0.9);white-space:nowrap;min-width:48px">Search</span>
+                    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:5px;padding:2px 8px;height:24px;width:160px">
+                        <span style="font-size:0.66rem;font-weight:600;color:rgba(255,255,255,0.9);white-space:nowrap;min-width:42px">Search</span>
                         <input type="text" id="searchInput" oninput="filterTree();toggleSearchClear()" placeholder="FID or Name" style="border:none;background:transparent;color:white;font-size:0.66rem;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;flex:1;min-width:0;outline:none" class="search-ph">
                         <span id="searchClear" onclick="clearSearch()" style="display:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;font-weight:700;flex-shrink:0">✕</span>
                     </div>
@@ -119,8 +145,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div class="file-tree" id="fileTree"></div>
         </div>
-        <div class="resizer" id="resizer"><div class="resizer-bar"></div></div>
-        <div class="card" id="midPanel" style="flex:7;min-width:300px;display:flex;flex-direction:column">
+        <div class="card" id="midPanel" style="flex:5;min-width:280px;display:flex;flex-direction:column">
             <div class="panel-title" style="min-height:36px;padding:6px 12px">
                 <span>📄 File Contents</span>
                 <span id="detailFileName" style="font-weight:400;font-size:0.74rem;opacity:0.9;margin-left:4px"></span>
@@ -250,7 +275,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                 <span id="writeTlvStatus" style="font-size:0.72rem"></span>
                 <span style="margin-left:auto"><button class="btn btn-dark" id="writeTlvRestoreBtn" onclick="tlvRestore()" disabled>↩ Restore</button></span>
             </div>
-            <div style="margin-top:12px;padding:8px 10px;background:#f8f9fa;border-radius:6px;font-size:0.70rem;color:#666">
+            <div style="margin-top:12px;padding:8px 10px;background:#fff;border:1px solid #eee;border-radius:6px;font-size:0.70rem;color:#666">
                 <span style="font-weight:600">Note:</span> Use URSP Rule Analyzer to encode/decode URSP rule hex values.<br>
                 <a href="https://huggingface.co/spaces/Joostone/ursp-rule-analyzer" target="_blank" style="color:#667eea">🔗 https://huggingface.co/spaces/Joostone/ursp-rule-analyzer</a>
             </div>
@@ -277,6 +302,7 @@ let admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};
 let admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
 let arrData={};  // {'MF/EF.ARR': [{decoded records}], 'ADF.USIM/EF.ARR': [...]}
 let _lastViewMode='decode';
+let hasIsim=false,hasUsim=false;
 const NO_ADM_FILES=['EF.FPLMN','EF.OPLMNwAcT'];
 const PLMN_FILES_WITH_ACT=['EF.PLMNwAcT','EF.OPLMNwAcT','EF.HPLMNwAcT'];
 const PLMN_FILES_NO_ACT=['EF.FPLMN','EF.EHPLMN'];
@@ -289,7 +315,7 @@ function isUrspFile(path){return path&&path.indexOf('EF.URSP')>=0;}
 async function api(u,b){try{const o=b!==undefined?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{method:'GET'};return await(await fetch(u,o)).json();}catch(e){return{success:false,error:e.message};}}
 
 /* === UI Helpers === */
-function setStep(n){currentStep=n;document.getElementById('mainContent').style.display=n>=2?'flex':'none';}
+function setStep(n){currentStep=n;}
 function setBadge(id,t,c){const e=document.getElementById(id);if(!t){e.style.display='none';return;}e.style.display='';e.className='status-badge'+(c?' status-'+c:'');e.textContent=t;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function syntaxHL(json){return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,function(m){var c='json-number';if(/^"/.test(m)){c=/:$/.test(m)?'json-key':'json-string';}else if(/true|false/.test(m)){c='json-boolean';}else if(/null/.test(m)){c='json-null';}return'<span class="'+c+'">'+m+'</span>';});}
@@ -321,7 +347,7 @@ function _getArrRecordForPath(path){
     var arrRecNr=cached.meta.arr_record_nr;
     if(!arrRecNr||arrRecNr<=0)return null;
     // Determine which ARR to use based on path
-    var arrKey=path.startsWith('ADF.USIM')?'ADF.USIM/EF.ARR':'MF/EF.ARR';
+    var arrKey=path.startsWith('ADF.USIM')?'ADF.USIM/EF.ARR':path.startsWith('ADF.ISIM')?'ADF.ISIM/EF.ARR':'MF/EF.ARR';
     var arr=arrData[arrKey];
     if(!arr||!arr.decoded)return null;
     var rec=arr.decoded[arrRecNr-1];
@@ -345,7 +371,7 @@ function _extractCondFromArr(rec,accessMode){
         }
         return{type:'unknown'};
     }
-    return null;
+    return{type:'never'};
 }
 function _parseCompactCondition(secStr,accessMode){
     // secStr like "WRITE/UPDATE=ADM1, READ=Always"
@@ -400,11 +426,16 @@ function updateDetailButtons(f,r){
     if(noAdm){btnWrite.disabled=false;btnWrite.removeAttribute('data-tip');return;}
     var writeCond=getArrCondition(f.path,'update_erase');
     var needsAdm=writeCond&&writeCond.type==='adm';
+    var isNever=writeCond&&writeCond.type==='never';
     if(needsAdm&&!isAdmSatisfied(writeCond)){
         btnWrite.disabled=true;
         btnWrite.setAttribute('data-tip','🔐 '+(writeCond.value||'ADM')+' verification required');
+    }else if(isNever){
+        btnWrite.disabled=true;
+        btnWrite.setAttribute('data-tip','🚫 Write not allowed (NEVER)');
     }else if(isError){
-        btnWrite.disabled=true;btnWrite.removeAttribute('data-tip');
+        btnWrite.disabled=true;
+        btnWrite.setAttribute('data-tip','⚠️ Read failed — cannot write');
     }else{
         btnWrite.disabled=false;btnWrite.removeAttribute('data-tip');
     }
@@ -437,55 +468,97 @@ async function refreshPorts(){
 }
 async function doConnect(){
     const port=document.getElementById('portSelect').value;
-    if(!port){setBadge('connectStatus','Please select a port','err');return;}
-    setBadge('connectStatus','Connecting...','warn');
+    if(!port){apduLogMsg('⚠️ Please select a port');return;}
+    var btn=document.getElementById('btnConnect');
+    btn.disabled=true;btn.textContent='Connecting...';
+    apduLogMsg('Connecting to '+port+'...');
     const r=await api('/connect',{port});
-    if(!r.success){setBadge('connectStatus','❌ '+r.error,'err');return;}
-    setBadge('connectStatus','Checking AT+CRSM...','warn');
+    if(!r.success){apduLogMsg('❌ '+r.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    apduLogMsg('Reading EF.DIR...');
     const at=await api('/at_check',{});
-    if(!at.success){setBadge('connectStatus','❌ '+at.error,'err');return;}
-    if(!at.crsm){setBadge('connectStatus','⚠️ AT OK but CRSM not supported','warn');return;}
-    // Read ARR files in background before showing connected
-    setBadge('connectStatus','Reading ARR...','warn');
+    if(!at.success){apduLogMsg('❌ '+at.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
+    apduLogMsg('USIM: ch'+at.usim_lchan+(at.isim_lchan>=0?', ISIM: ch'+at.isim_lchan:', ISIM: N/A'));
+    apduLogMsg('Reading EF.ARR...');
     await loadArrData();
-    setBadge('connectStatus','','');
+    apduLogMsg('Reading ICCID/IMSI/MSISDN...');
+    var info=await api('/read_info',{});
+    if(info.iccid||info.imsi||info.msisdn){
+        var lbl='<span class="setup-label" style="min-width:auto;padding:0 8px 0 4px">';
+        var val='<span style="font-weight:600;color:#333;font-size:0.72rem;font-family:Consolas,monospace">';
+        document.getElementById('simIccid').innerHTML=info.iccid?(lbl+'ICCID</span>'+val+info.iccid+'</span>'):'';
+        document.getElementById('simIccidSep').style.display=(info.iccid&&info.imsi)?'':'none';
+        document.getElementById('simImsi').innerHTML=info.imsi?(lbl+'IMSI</span>'+val+info.imsi+'</span>'):'';
+        document.getElementById('simMsisdnSep').style.display=(info.imsi&&info.msisdn)?'':'none';
+        document.getElementById('simMsisdn').innerHTML=info.msisdn?(lbl+'MSISDN</span>'+val+info.msisdn+'</span>'):'';
+        document.getElementById('simInfoArea').style.display='flex';
+    }
+    // Cache for green dots
+    if(info.iccid){readCache['MF/EF.ICCID']={success:true,structure:'transparent',data:info._iccid_hex||'',decoded:{iccid:info.iccid},meta:info._iccid_meta||{}};}
+    if(info.imsi){readCache['ADF.USIM/EF.IMSI']={success:true,structure:'transparent',data:info._imsi_hex||'',decoded:{imsi:info.imsi},meta:info._imsi_meta||{}};}
+    if(info.msisdn){readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:[info._msisdn_hex||''],decoded:[{msisdn:info.msisdn}],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:1};}
+    apduLogMsg('Connected ✅');
     document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('portSelect').disabled=true;
     document.getElementById('admArea').style.display='flex';
+    await api('/apdu_log_clear',{});_apduLogIdx=0;
+    startApduPoll();
     setStep(2);loadFileTree();
 }
 async function doDisconnect(){
     await api('/disconnect',{});setBadge('connectStatus','','');
     document.getElementById('btnConnect').style.display='';document.getElementById('btnDisconnect').style.display='none';document.getElementById('portSelect').disabled=false;
     admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
-    arrData={};
+    arrData={};hasIsim=false;hasUsim=false;
     document.getElementById('admArea').style.display='none';
+    document.getElementById('simInfoArea').style.display='none';
+    document.getElementById('simIccid').textContent='';
+    document.getElementById('simImsi').textContent='';
+    document.getElementById('simMsisdn').textContent='';
     for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
     document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
     document.getElementById('detailFileName').textContent='';
     resetDetailButtons();
     readCache={};selectedFile=null;allFiles=[];
-    document.getElementById('fileTree').innerHTML='';document.getElementById('fileCount').textContent='';
+    document.getElementById('fileTree').innerHTML='';
     document.getElementById('searchInput').value='';
-    setStep(1);
+    setStep(1);stopApduPoll();clearApduLog();
 }
 async function loadArrData(){
     try{
         var r=await api('/read_arr',{});
-        if(r.success&&r.arr){arrData=r.arr;}
+        if(r.success&&r.arr){
+            arrData=r.arr;
+            // Pre-populate readCache for ARR files (green dot + decoded data)
+            for(var path in r.arr){
+                var a=r.arr[path];
+                readCache[path]={
+                    success:true,
+                    structure:'linear_fixed',
+                    data:a.records_hex,
+                    decoded:a.decoded,
+                    record_len:a.records_hex&&a.records_hex[0]?a.records_hex[0].length/2:0,
+                    num_records:a.num_records,
+                    meta:{}
+                };
+            }
+        }
     }catch(e){console.error('ARR load failed:',e);}
 }
 
 /* === File Tree === */
-async function loadFileTree(){const r=await api('/files');if(!r.files)return;allFiles=r.files;document.getElementById('fileCount').textContent=`(${allFiles.filter(f=>f.type==='EF').length} EFs)`;renderTree(allFiles);}
+async function loadFileTree(){const r=await api('/files');if(!r.files)return;allFiles=r.files;if(r.isim_aid)hasIsim=true;renderTree(allFiles);}
 function renderTree(files){
     const c=document.getElementById('fileTree');c.innerHTML='';const q=(document.getElementById('searchInput').value||'').toUpperCase();
     const groups={};files.forEach(f=>{const g=f.path.split('/')[0];if(!groups[g])groups[g]=[];groups[g].push(f);});
-    ['MF','ADF.USIM'].forEach(gN=>{
+    var groupOrder=['MF','ADF.USIM'];
+    if(hasIsim)groupOrder.push('ADF.ISIM');
+    groupOrder.forEach(gN=>{
         if(!groups[gN])return;let items=groups[gN];
         if(q){items=items.filter(f=>f.name.toUpperCase().includes(q)||f.fid.toUpperCase().includes(q)||f.path.toUpperCase().includes(q));if(!items.length)return;}
         const grp=document.createElement('div');grp.className='tree-group';
         const hdr=document.createElement('div');hdr.className='tree-group-header';
-        const icons={'MF':'📁','ADF.USIM':'📱'};
+        const icons={'MF':'📁','ADF.USIM':'📁','ADF.ISIM':'📁'};
         hdr.innerHTML=`<span class="tree-group-arrow open">▶</span>${icons[gN]||'📁'} ${gN} <span style="color:#aaa;font-weight:400;font-size:0.66rem">(${items.filter(f=>f.type==='EF').length})</span>`;
         hdr.onclick=()=>{const a=hdr.querySelector('.tree-group-arrow'),b=grp.querySelector('.tree-group-body');a.classList.toggle('open');b.style.display=a.classList.contains('open')?'':'none';};
         grp.appendChild(hdr);
@@ -493,7 +566,7 @@ function renderTree(files){
         items.forEach(f=>{
             const item=document.createElement('div');const isDF=f.type==='DF';item.className='tree-item'+(isDF?' df-item':'');
             const cached=readCache[f.path];let dot='unread';if(cached)dot=cached.error?'read-err':'read-ok';
-            const st={'transparent':'Transparent','linear_fixed':'Linear Fixed','cyclic':'Cyclic','ber_tlv':'BER-TLV'}[f.structure]||'';
+            const st={'transparent':'TF','linear_fixed':'LF','cyclic':'CF','ber_tlv':'BER-TLV'}[f.structure]||'';
             item.innerHTML=`<span class="read-dot ${dot}"></span><span class="fid">${f.fid}</span><span class="fname">${f.name}</span>${!isDF?`<span class="ftype">${st}</span>`:''}`;
             if(!isDF)item.onclick=()=>selectFile(f,item);body.appendChild(item);
         });
@@ -508,18 +581,20 @@ function clearSearch(){document.getElementById('searchInput').value='';document.
 function selectFile(f,el){
     document.querySelectorAll('.tree-item.selected').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');
     selectedFile=f;document.getElementById('detailFileName').textContent=f.path.replace(/\//g,' / ');
-    if(readCache[f.path]&&!readCache[f.path].error){showFileData(f,readCache[f.path]);}else doRead();
+    if(readCache[f.path]&&!readCache[f.path].error){apduLogMsg('SELECT '+f.name+' ('+f.fid+') — cached');showFileData(f,readCache[f.path]);}else doRead();
 }
 let _isReading=false,_pendingRead=null;
 async function doRead(){
     if(_isReading){_pendingRead=selectedFile;return;}
     _isReading=true;_pendingRead=null;
     const f=selectedFile;
+    apduLogMsg('SELECT '+f.name+' ('+f.fid+')');
     document.getElementById('detailEmpty').style.display='none';document.getElementById('detailContent').style.display='flex';
     document.getElementById('decodeView').innerHTML='<div style="color:#aaa;padding:20px;text-align:center;font-size:0.74rem">⏳ Reading...</div>';
     document.getElementById('rawView').innerHTML='';
     resetDetailButtons();
     const r=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});
+    await pollApduLog();
     _isReading=false;
     // Always cache the result
     if(r.success){readCache[f.path]=r;}else{readCache[f.path]={error:r.error,sw:r.sw,meta:r.meta};}
@@ -560,7 +635,8 @@ function _renderDecodeView(f,r){
     if(r.error&&!r.success){
         var sw=r.sw||'';
         var desc=swText(sw);
-        var errHtml='<div style="padding:15px 15px 15px 20px"><span style="color:#e74c3c;font-size:0.74rem">'+esc(sw)+(desc?' : '+esc(desc):'')+'</span>';
+        var errMsg=sw?(esc(sw)+(desc?' : '+esc(desc):'')):(esc(r.error)||'Read failed');
+        var errHtml='<div style="padding:15px 15px 15px 20px"><span style="color:#e74c3c;font-size:0.74rem">'+errMsg+'</span>';
         if(sw&&sw.toUpperCase()==='6982'){
             var readCond=getArrCondition(f.path,'read_search_compare');
             var writeCond=getArrCondition(f.path,'update_erase');
@@ -630,7 +706,7 @@ function _arrCondLabel(cond){
     return'?';
 }
 function _parseArrRecord(rec){
-    var row={};for(var i=0;i<_ARR_COLS.length;i++)row[_ARR_COLS[i]]='-';
+    var row={};for(var i=0;i<_ARR_COLS.length;i++)row[_ARR_COLS[i]]='NEVER';
     if(!rec||!Array.isArray(rec))return row;
     for(var r=0;r<rec.length;r++){
         var rule=rec[r];if(!Array.isArray(rule)||rule.length<2)continue;
@@ -639,15 +715,15 @@ function _parseArrRecord(rec){
         var label=_arrCondLabel(cond);
         for(var m=0;m<am.access_mode.length;m++){
             var mode=am.access_mode[m];
-            if(row[mode]==='-')row[mode]=label;
+            if(row[mode]==='NEVER')row[mode]=label;
         }
     }
     return row;
 }
 function _buildArrTable(decoded){
     var html='<table class="rec-table"><thead><tr>';
-    html+='<th>#</th>';
-    for(var h=0;h<_ARR_HDR.length;h++)html+='<th>'+_ARR_HDR[h]+'</th>';
+    html+='<th style="width:32px">#</th>';
+    for(var h=0;h<_ARR_HDR.length;h++)html+='<th style="width:120px">'+_ARR_HDR[h]+'</th>';
     html+='</tr></thead><tbody>';
     for(var i=0;i<decoded.length;i++){
         var rec=decoded[i];var recNum=i+1;
@@ -700,7 +776,7 @@ function doCopy(btn){
         if(table){var rows=table.querySelectorAll('tr');rows.forEach(function(row){var cells=[];row.querySelectorAll('th,td').forEach(function(c){cells.push(c.innerText.trim());});text+=cells.join('\t')+'\n'});}
         else{text=dv.innerText||dv.textContent||'';}
     }
-    navigator.clipboard.writeText(text.trim()).then(function(){btn.textContent='✓ Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);});
+    navigator.clipboard.writeText(text.trim()).then(function(){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);});
 }
 
 /* === ADM Verification === */
@@ -719,9 +795,12 @@ function updateAdmRow(input){var row=input.closest('.adm-row');var val=input.val
 async function doAdmVerify(btn,admType){
     var row=btn.closest('.adm-row');var input=row.querySelector('.adm-input');var status=document.getElementById('admStatus');
     var a=input.value.trim();
+    apduLogMsg('VERIFY '+admType);
     status.innerHTML='<span style="color:#888">⏳ Verifying '+admType+'...</span>';status.style.display='block';btn.disabled=true;
     var r=await api('/verify_adm',{adm:a,adm_type:admType});
+    await pollApduLog();
     if(r.success){
+        apduLogMsg(admType+' verified ✅');
         admVerified[admType]=true;admKeys[admType]=a;
         btn.textContent='Verified';btn.style.background='linear-gradient(45deg,#27ae60,#2ecc71)';btn.style.color='white';input.readOnly=true;
         status.innerHTML='<span style="color:#27ae60">✅ '+admType+' verified successfully</span>';
@@ -730,6 +809,7 @@ async function doAdmVerify(btn,admType){
         // Refresh Write button for currently selected file
         if(selectedFile&&readCache[selectedFile.path]){updateDetailButtons(selectedFile,readCache[selectedFile.path]);}
     }else{
+        apduLogMsg(admType+' verify failed ❌');
         status.innerHTML='<span style="color:#c0392b">❌ '+admType+': '+(r.error||'Verification failed')+'</span>';btn.disabled=false;
     }
 }
@@ -781,11 +861,14 @@ async function submitWrite(){
     if(isPlmnFile(f.name)){const inputs=document.querySelectorAll('#writePlmnList input');const rows={};inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!rows[idx])rows[idx]={};rows[idx][field]=inp.value.trim();});for(const idx in rows){const e=rows[idx];if((e.mcc&&e.mcc.length>0)!==(e.mnc&&e.mnc.length>0)){document.getElementById('writeStatus').innerHTML=`<span style="color:#e74c3c">Row ${parseInt(idx)+1}: MCC and MNC must both be filled or both empty</span>`;return;}}}
     const hex=document.getElementById('writeHexInput').value.replace(/\s/g,'');const isLf=r.structure==='linear_fixed'||r.structure==='cyclic';const recNr=isLf?parseInt(document.getElementById('writeRecordSelect').value)+1:0;
     document.getElementById('writeStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeSubmitBtn').disabled=true;
-    const wr=await api('/write',{fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
-    if(wr.success){document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
-        delete readCache[f.path];const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});if(rr.success){readCache[f.path]=rr;showFileData(f,rr);}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
+    apduLogMsg((isLf?'UPDATE RECORD':'UPDATE BINARY')+' '+f.name+' ('+f.fid+')'+(isLf?' rec#'+recNr:''));
+    const wr=await api('/write',{path:f.path,fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
+    await pollApduLog();
+    if(wr.success){apduLogMsg('Write OK ✅');document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
+        apduLogMsg('RE-READ '+f.name+' ('+f.fid+')');
+        delete readCache[f.path];const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
         if(isPlmnFile(f.name)&&document.getElementById('writePlmnSection').style.display!=='none'){writeOrigHex=(readCache[f.path].data||hex).toUpperCase();renderPlmnEditor();}
-    }else{document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
+    }else{await pollApduLog();apduLogMsg('Write failed ❌');document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
 }
 
 /* === Service Table Write === */
@@ -794,7 +877,7 @@ async function renderServiceTable(){
     const efName=selectedFile.path.endsWith('/EF.UST')?'UST':selectedFile.path.endsWith('/EF.IST')?'IST':'EST';
     const resp=await api('/service_map',{ef:efName});if(!resp.success||!resp.map)return;writeServiceMap=resp.map;
     const rawHex=(typeof r.data==='string')?r.data.toUpperCase().replace(/\s/g,''):'';const bits=hexToBits(rawHex);writeServiceOrig=JSON.parse(JSON.stringify(bits));
-    let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="width:40px;padding:3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">#</th><th style="padding:3px 8px;text-align:left;background:#f0f2f5;font-size:0.70rem">Service</th><th style="width:80px;padding:3px 10px 3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">Status</th></tr></thead><tbody>';
+    let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="width:40px;padding:3px 6px;text-align:center;background:#fff;font-size:0.70rem">#</th><th style="padding:3px 8px;text-align:left;background:#fff;font-size:0.70rem">Service</th><th style="width:80px;padding:3px 10px 3px 6px;text-align:center;background:#fff;font-size:0.70rem">Status</th></tr></thead><tbody>';
     Object.keys(writeServiceMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(num=>{const label=writeServiceMap[num],enabled=!!bits[parseInt(num)];html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;});
     html+='</tbody></table>';document.getElementById('writeServiceList').innerHTML=html;
 }
@@ -805,7 +888,7 @@ function onServiceHexInput(){const cur=document.getElementById('writeServiceHexI
 /* === PLMN Write === */
 let plmnOrigEntries=[];
 function renderPlmnEditor(){const f=selectedFile,r=readCache[f.path];if(!r||!r.data)return;const withAcT=hasAcT(f.name);const entries=parsePlmnList(r.data,withAcT);plmnOrigEntries=JSON.parse(JSON.stringify(entries));
-    let html='<table style="width:auto;border-collapse:collapse"><thead><tr><th style="width:36px;padding:3px 6px;text-align:center;background:#f0f2f5;font-size:0.70rem">#</th><th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">MCC</th><th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">MNC</th>';if(withAcT)html+='<th style="padding:3px 8px;background:#f0f2f5;font-size:0.70rem">AcT</th>';html+='</tr></thead><tbody>';
+    let html='<table style="width:auto;border-collapse:collapse"><thead><tr><th style="width:36px;padding:3px 6px;text-align:center;background:#fff;font-size:0.70rem">#</th><th style="padding:3px 8px;background:#fff;font-size:0.70rem">MCC</th><th style="padding:3px 8px;background:#fff;font-size:0.70rem">MNC</th>';if(withAcT)html+='<th style="padding:3px 8px;background:#fff;font-size:0.70rem">AcT</th>';html+='</tr></thead><tbody>';
     entries.forEach((e,i)=>{html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace;font-size:0.70rem">${i+1}</td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;html+='</tr>';});
     html+='</tbody></table>';document.getElementById('writePlmnList').innerHTML=html;}
 function plmnEditorToHex(){const f=selectedFile;const withAcT=hasAcT(f.name);const inputs=document.querySelectorAll('#writePlmnList input');const map={};inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!map[idx])map[idx]={mcc:'',mnc:'',act:''};map[idx][field]=inp.value.trim();});let hex='';Object.keys(map).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(idx=>{const e=map[idx];if(!e.mcc&&!e.mnc){hex+=withAcT?'FFFFFF0000':'FFFFFF';}else{hex+=encodePlmn(e.mcc,e.mnc);if(withAcT)hex+=(e.act||'0000').padEnd(4,'0');}});return hex.toUpperCase();}
@@ -831,17 +914,96 @@ async function tlvWrite(){
     var i=tagHex.length;var lenByte=parseInt(data.substr(i,2),16);i+=2;var expectedLen=0;if(lenByte<=0x7F){expectedLen=lenByte;}else if(lenByte===0x81){expectedLen=parseInt(data.substr(i,2),16);i+=2;}else if(lenByte===0x82){expectedLen=parseInt(data.substr(i,4),16);i+=4;}var actualLen=(data.length-i)/2;
     if(actualLen!==expectedLen){document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Length mismatch: expected ${expectedLen} bytes, got ${actualLen} bytes</span>`;return;}
     document.getElementById('writeTlvStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeTlvWriteBtn').disabled=true;
+    apduLogMsg('SELECT '+selectedFile.name+' ('+selectedFile.fid+')');
     const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
-    if(wr.success){document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
-        delete readCache[selectedFile.path];const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);}
-    }else{document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
+    await pollApduLog();
+    if(wr.success){apduLogMsg('SET DATA OK ✅');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
+        apduLogMsg('RE-READ '+selectedFile.name+' ('+selectedFile.fid+')');
+        delete readCache[selectedFile.path];const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);}
+    }else{await pollApduLog();apduLogMsg('SET DATA failed ❌');document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
 }
 
 /* === Panel Resizer === */
 function initResizer(rid,lid){const resizer=document.getElementById(rid);const left=document.getElementById(lid);let dragging=false;resizer.addEventListener('mousedown',e=>{dragging=true;e.preventDefault();document.body.style.cursor='col-resize';document.body.style.userSelect='none';});document.addEventListener('mousemove',e=>{if(!dragging)return;const rect=left.getBoundingClientRect();const w=e.clientX-rect.left;if(w>=200&&w<=window.innerWidth*0.5){left.style.flex='none';left.style.width=w+'px';}});document.addEventListener('mouseup',()=>{if(dragging){dragging=false;document.body.style.cursor='';document.body.style.userSelect='';}});}
 
+/* === APDU Console === */
+let _apduLogIdx=0,_apduPollTimer=null;
+function startApduPoll(){if(_apduPollTimer)return;_apduPollTimer=setInterval(pollApduLog,1000);}
+function stopApduPoll(){if(_apduPollTimer){clearInterval(_apduPollTimer);_apduPollTimer=null;}}
+async function pollApduLog(){
+    try{
+        var r=await api('/apdu_log?since='+_apduLogIdx);
+        if(!r.entries||!r.entries.length)return;
+        var el=document.getElementById('apduLog');
+        r.entries.forEach(function(e){
+            var block=document.createElement('div');
+            block.style.cssText='margin:2px 0;white-space:pre';
+            if(e.dir==='msg'){
+                block.style.cssText='color:#667eea;font-style:italic;padding:1px 0';
+                block.textContent='── '+e.data;
+            }else if(e.dir==='tx'){
+                block.innerHTML='<span style="color:#0066FF;font-weight:700">▶ </span>'+_fmtApduTx(e.data);
+            }else{
+                var dataAndSw=(e.data||'')+e.sw;
+                block.innerHTML='<span style="color:#e74c3c;font-weight:700">◀ </span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
+            }
+            el.appendChild(block);
+        });
+        _apduLogIdx=r.total;
+        el.scrollTop=el.scrollHeight;
+    }catch(e){}
+}
+function _fmtApduTx(hex){
+    if(!hex||hex.length<8)return esc(hex);
+    var cla=hex.substr(0,2),ins=hex.substr(2,2),p1=hex.substr(4,2),p2=hex.substr(6,2);
+    var rest=hex.substr(8);
+    var header='<span style="color:#667eea;font-weight:600">'+cla+'</span> <span style="color:#764ba2;font-weight:600">'+ins+'</span> '+p1+' '+p2;
+    if(!rest)return header;
+    return header+' '+_fmtHexBlock(rest,2);
+}
+function _fmtHexBlock(hex,indent){
+    if(!hex)return'';
+    var spaced=hex.replace(/(.{2})/g,'$1 ').trim();
+    var bytes=spaced.split(' ');
+    var lines=[];
+    for(var i=0;i<bytes.length;i+=16){
+        lines.push(bytes.slice(i,i+16).join(' '));
+    }
+    var pad='\n'+' '.repeat(indent);
+    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+}
+function _fmtHexBlockRx(hex,indent,sw){
+    // Format hex with SW highlighted at the end
+    if(!hex)return'';
+    var swLen=sw?sw.length:0;
+    var dataHex=swLen?hex.slice(0,-swLen):hex;
+    var swHex=swLen?hex.slice(-swLen):'';
+    var swColor=sw&&sw.startsWith('90')?'#27ae60':sw&&(sw.startsWith('61')||sw.startsWith('9F'))?'#e67e22':'#e74c3c';
+    var allBytes=hex.replace(/(.{2})/g,'$1 ').trim().split(' ');
+    var swStart=allBytes.length-(swLen/2);
+    var lines=[];
+    for(var i=0;i<allBytes.length;i+=16){
+        var chunk=allBytes.slice(i,i+16);
+        var parts=[];
+        for(var j=0;j<chunk.length;j++){
+            var idx=i+j;
+            if(idx>=swStart){
+                parts.push('<span style="color:'+swColor+';font-weight:700">'+chunk[j]+'</span>');
+            }else{
+                parts.push(chunk[j]);
+            }
+        }
+        lines.push(parts.join(' '));
+    }
+    var pad='\n'+' '.repeat(indent);
+    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+}
+async function clearApduLog(){document.getElementById('apduLog').innerHTML='';await api('/apdu_log_clear',{});_apduLogIdx=0;}
+function copyApduLog(btn){var el=document.getElementById('apduLog');navigator.clipboard.writeText(el.innerText||el.textContent||'');if(btn){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);}}
+function apduLogMsg(msg){var el=document.getElementById('apduLog');var d=document.createElement('div');d.style.cssText='color:#667eea;font-style:italic;padding:1px 0';d.textContent='── '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+
 /* === Init === */
-refreshPorts();initResizer('resizer','leftPanel');
+refreshPorts();
 </script>
 </body>
 </html>

@@ -20,6 +20,8 @@ class ATModem:
         self.ser: serial.Serial | None = None
         self.last_cmd = ''
         self.last_resp = ''
+        self.apdu_log: list[dict] = []  # [{dir:'tx'/'rx', data:'hex', sw:'', ts:float}]
+        self.apdu_log_max = 500
 
     def connect(self, port: str = None) -> dict:
         """Connect to serial port and verify AT response."""
@@ -52,6 +54,15 @@ class ATModem:
     def is_connected(self) -> bool:
         return self.ser is not None and self.ser.is_open
 
+    def _log_apdu(self, direction: str, apdu: str, sw: str = ''):
+        """Add APDU to log buffer. direction: 'tx', 'rx', or 'msg'."""
+        self.apdu_log.append({
+            'dir': direction, 'data': apdu.upper() if direction != 'msg' else apdu, 'sw': sw.upper() if sw else '',
+            'ts': time.time()
+        })
+        if len(self.apdu_log) > self.apdu_log_max:
+            self.apdu_log = self.apdu_log[-self.apdu_log_max:]
+
     def _send(self, cmd: str, timeout: float = None) -> str:
         """Send AT command and receive response."""
         if not self.is_connected:
@@ -82,87 +93,228 @@ class ATModem:
         return resp
 
     def at_check(self) -> dict:
-        """Verify AT basic operation + CRSM support."""
+        """Verify AT, read EF.DIR for AIDs, scan channels, CCHO fallback."""
         try:
-            # Basic AT check
             resp = self._send('AT')
             if 'OK' not in resp:
                 return {'success': False, 'error': 'No AT response'}
-            # CRSM support check — try reading EF.ICCID(2FE2)
-            resp2 = self._send('AT+CRSM=176,12258,0,0,10')
-            if '+CRSM:' in resp2:
-                m = re.search(r'\+CRSM:\s*(\d+),\s*(\d+)', resp2)
-                if m:
-                    sw1, sw2 = int(m.group(1)), int(m.group(2))
-                    if sw1 == 144:
-                        return {'success': True, 'crsm': True}
-                    else:
-                        return {'success': True, 'crsm': True,
-                                'warning': f'SW={sw1},{sw2}'}
-                return {'success': True, 'crsm': True}
-            else:
-                return {'success': True, 'crsm': False,
-                        'warning': 'AT+CRSM not supported'}
+            # 1. Read EF.DIR first to get full AIDs
+            aids = self.read_ef_dir()
+            # 2. Scan channels to find USIM/ISIM
+            channels = self.scan_channels(aids)
+            return {'success': True, 'csim': True, 'aids': aids, 'channels': channels}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def crsm_read_binary(self, file_id: int, length: int = 0) -> dict:
-        """AT+CRSM READ BINARY (INS=176). Auto-splits for large files."""
-        if length <= 255 or length == 0:
-            cmd = f'AT+CRSM=176,{file_id},0,0,{length}'
-            resp = self._send(cmd)
-            return self._parse_crsm(resp)
-        # Split into chunks of 255 bytes
+    def csim_send(self, apdu_hex: str) -> dict:
+        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE).
+        Skips GET RESPONSE for SELECT (INS=A4) to preserve card context."""
+        length = len(apdu_hex)
+        cmd = f'AT+CSIM={length},"{apdu_hex}"'
+        self._log_apdu('tx', apdu_hex)
+        resp = self._send(cmd)
+        result = self._parse_csim(resp)
+        sw = result.get('sw', '')
+        # Auto GET RESPONSE for SW 61xx — but NOT for SELECT commands
+        ins = apdu_hex[2:4].upper() if len(apdu_hex) >= 4 else ''
+        if sw.startswith('61') and ins != 'A4':
+            le = sw[2:4]
+            orig_cla = int(apdu_hex[:2], 16)
+            if orig_cla & 0x40:
+                get_resp_cla = 0x40 | (orig_cla & 0x0F)
+            else:
+                get_resp_cla = 0x00 | (orig_cla & 0x03)
+            get_resp = f'{get_resp_cla:02X}C00000{le}'
+            resp2 = self._send(f'AT+CSIM={len(get_resp)},"{get_resp}"')
+            result2 = self._parse_csim(resp2)
+            result2['data'] = result.get('data', '') + result2.get('data', '')
+            self._log_apdu('rx', result2.get('data', ''), result2.get('sw', ''))
+            return result2
+        # Treat 61xx as success for SELECT (FCP available but not fetched)
+        if sw.startswith('61') and ins == 'A4':
+            result['success'] = True
+        self._log_apdu('rx', result.get('data', ''), sw)
+        return result
+        # Treat 61xx as success for SELECT (FCP available but not fetched)
+        if sw.startswith('61') and ins == 'A4':
+            result['success'] = True
+        return result
+
+    def scan_channels(self, aids: list[str]) -> dict:
+        """Scan logical channels 0~19 with STATUS command to find USIM/ISIM.
+        Channels 0~3: basic (CLA = 0x00|ch), Channels 4~19: extended (CLA = 0x40|(ch-4))
+        Returns {'usim': {'lchan': N, 'aid': '...'}, 'isim': {'lchan': N, 'aid': '...'}}"""
+        result = {}
+        usim_prefix = 'A0000000871002'
+        isim_prefix = 'A0000000871004'
+        fail_count = 0
+        for ch in range(20):
+            cla = _cla_for_lchan(ch, proprietary=True)
+            r = self.csim_send(f'{cla:02X}F2000000')
+            sw = r.get('sw', '')
+            data = r.get('data', '')
+            if not (sw.startswith('90') or sw.startswith('61')) or not data:
+                fail_count += 1
+                # 6E00 = class not supported → extended channels not available
+                if ch > 3 and (fail_count >= 2 or sw == '6E00'):
+                    break
+                continue
+            fail_count = 0
+            aid = _extract_aid_from_fcp(data)
+            if aid:
+                aid_upper = aid.upper()
+                if aid_upper.startswith(usim_prefix) and 'usim' not in result:
+                    result['usim'] = {'lchan': ch, 'aid': aid_upper}
+                    logger.info("[SCAN] Channel %d: USIM (%s)", ch, aid_upper)
+                elif aid_upper.startswith(isim_prefix) and 'isim' not in result:
+                    result['isim'] = {'lchan': ch, 'aid': aid_upper}
+                    logger.info("[SCAN] Channel %d: ISIM (%s)", ch, aid_upper)
+            else:
+                # Channel responds but no AID (e.g. MF selected) — assume USIM on channel 0
+                if ch == 0 and 'usim' not in result:
+                    result['usim'] = {'lchan': 0, 'aid': ''}
+                    logger.info("[SCAN] Channel 0: USIM (no AID, assumed)")
+            if 'usim' in result and 'isim' in result:
+                break
+        # Fallback: if no USIM found, default to channel 0
+        if 'usim' not in result:
+            result['usim'] = {'lchan': 0, 'aid': ''}
+            logger.info("[SCAN] Defaulting USIM to channel 0")
+        return result
+
+    def csim_read_binary(self, length: int, lchan: int = 0) -> dict:
+        """READ BINARY via AT+CSIM on given logical channel."""
+        cla = _cla_for_lchan(lchan)
+        if length <= 255:
+            apdu = f'{cla:02X}B00000{length:02X}'
+            r = self.csim_send(apdu)
+            # Trim response to requested length (some modems return more)
+            data = r.get('data', '')
+            if len(data) > length * 2:
+                r['data'] = data[:length * 2]
+                # Update last log entry with trimmed data
+                if self.apdu_log and self.apdu_log[-1]['dir'] == 'rx':
+                    self.apdu_log[-1]['data'] = r['data']
+            return r
+        # Split into chunks
         data = ''
         offset = 0
+        sw = ''
         while offset < length:
             chunk_len = min(255, length - offset)
             p1 = (offset >> 8) & 0xFF
             p2 = offset & 0xFF
-            cmd = f'AT+CRSM=176,{file_id},{p1},{p2},{chunk_len}'
-            resp = self._send(cmd)
-            r = self._parse_crsm(resp)
-            if not r['success']:
-                if data:
-                    # Return what we got so far
-                    return {'success': True, 'sw1': 144, 'sw2': 0, 'data': data}
-                return r
-            data += r['data']
-            offset += chunk_len
-        return {'success': True, 'sw1': 144, 'sw2': 0, 'data': data}
+            apdu = f'{cla:02X}B0{p1:02X}{p2:02X}{chunk_len:02X}'
+            r = self.csim_send(apdu)
+            sw = r.get('sw', '')
+            if sw.startswith('90'):
+                chunk_data = r.get('data', '')
+                if len(chunk_data) > chunk_len * 2:
+                    chunk_data = chunk_data[:chunk_len * 2]
+                data += chunk_data
+                offset += chunk_len
+            else:
+                break
+        return {'success': sw.startswith('90'), 'data': data, 'sw': sw}
 
-    def crsm_read_record(self, file_id: int, record: int, length: int) -> dict:
-        """AT+CRSM READ RECORD (INS=178)."""
-        cmd = f'AT+CRSM=178,{file_id},{record},4,{length}'
+    def csim_read_record(self, rec_no: int, rec_len: int, lchan: int = 0) -> dict:
+        """READ RECORD via AT+CSIM on given logical channel."""
+        cla = _cla_for_lchan(lchan)
+        apdu = f'{cla:02X}B2{rec_no:02X}04{rec_len:02X}'
+        r = self.csim_send(apdu)
+        data = r.get('data', '')
+        if len(data) > rec_len * 2:
+            r['data'] = data[:rec_len * 2]
+            if self.apdu_log and self.apdu_log[-1]['dir'] == 'rx':
+                self.apdu_log[-1]['data'] = r['data']
+        return r
+
+    def _get_response(self, sw: str, lchan: int = 0) -> dict:
+        """Send GET RESPONSE for 61xx SW. Returns parsed result with FCP data."""
+        le = sw[2:4]
+        cla = f'{_cla_for_lchan(lchan):02X}'
+        return self.csim_send(f'{cla}C00000{le}')
+
+    # ── AT+CCHO/CGLA session-based access (fallback for modems without lchan support) ──
+
+    def ccho_open(self, aid_hex: str) -> int | None:
+        """Open logical channel by AID via AT+CCHO. Returns session ID or None."""
+        cmd = f'AT+CCHO="{aid_hex.upper()}"'
         resp = self._send(cmd)
-        return self._parse_crsm(resp)
+        if 'ERROR' in resp:
+            return None
+        for line in resp.strip().split('\n'):
+            line = line.strip()
+            if line.isdigit():
+                return int(line)
+        return None
 
-    def crsm_get_response(self, file_id: int) -> dict:
-        """AT+CRSM GET RESPONSE (INS=192) — file metadata."""
-        cmd = f'AT+CRSM=192,{file_id},0,0,0'
-        resp = self._send(cmd)
-        return self._parse_crsm(resp)
+    def ccho_close(self, session_id: int) -> bool:
+        """Close logical channel via AT+CCHC."""
+        resp = self._send(f'AT+CCHC={session_id}')
+        return 'OK' in resp
 
-    def crsm_update_binary(self, file_id: int, data: str) -> dict:
-        """AT+CRSM UPDATE BINARY (INS=214)."""
-        length = len(data) // 2
-        cmd = f'AT+CRSM=214,{file_id},0,0,{length},"{data}"'
-        resp = self._send(cmd)
-        return self._parse_crsm(resp)
-
-    def crsm_update_record(self, file_id: int, record: int,
-                           length: int, data: str) -> dict:
-        """AT+CRSM UPDATE RECORD (INS=220)."""
-        cmd = f'AT+CRSM=220,{file_id},{record},4,{length},"{data}"'
-        resp = self._send(cmd)
-        return self._parse_crsm(resp)
-
-    def csim_send(self, apdu_hex: str) -> dict:
-        """AT+CSIM — send raw APDU."""
+    def cgla_send(self, session_id: int, apdu_hex: str) -> dict:
+        """Send APDU via AT+CGLA on a CCHO session. Returns same format as csim_send."""
         length = len(apdu_hex)
-        cmd = f'AT+CSIM={length},"{apdu_hex}"'
+        cmd = f'AT+CGLA={session_id},{length},"{apdu_hex}"'
+        self._log_apdu('tx', apdu_hex)
         resp = self._send(cmd)
-        return self._parse_csim(resp)
+        result = self._parse_cgla(resp)
+        self._log_apdu('rx', result.get('data', ''), result.get('sw', ''))
+        return result
+
+    def _parse_cgla(self, resp: str) -> dict:
+        """Parse AT+CGLA response (same format as +CSIM)."""
+        m = re.search(r'\+CGLA:\s*\d+,\s*"([^"]*)"', resp)
+        if not m:
+            if 'ERROR' in resp:
+                return {'success': False, 'data': '', 'error': resp.strip()}
+            return {'success': False, 'data': '',
+                    'error': f'Parse failed: {resp.strip()}'}
+        data = m.group(1).upper()
+        sw = data[-4:] if len(data) >= 4 else ''
+        payload = data[:-4] if len(data) > 4 else ''
+        success = sw == '9000' or sw.startswith('61') or sw.startswith('9F')
+        result = {'success': success, 'sw': sw, 'data': payload}
+        if not success:
+            result['error'] = f'SW={sw}'
+        return result
+
+    def read_ef_dir(self) -> list[str]:
+        """Read EF.DIR (2F00) via AT+CSIM and extract AIDs from all records.
+        Returns list of AID hex strings."""
+        aids = []
+        # SELECT MF
+        r = self.csim_send('00A40004023F00')
+        sw = r.get('sw', '')
+        if not (sw.startswith('90') or sw.startswith('61')):
+            return aids
+        # SELECT EF.DIR (2F00)
+        r = self.csim_send('00A40004022F00')
+        sw = r.get('sw', '')
+        if not (sw.startswith('90') or sw.startswith('61')):
+            return aids
+        # GET RESPONSE for FCP if 61xx
+        fcp_data = r.get('data', '')
+        if sw.startswith('61') and not fcp_data:
+            r2 = self._get_response(sw)
+            fcp_data = r2.get('data', '')
+        if not fcp_data:
+            return aids
+        meta = parse_fcp(fcp_data)
+        record_len = meta.get('record_len', 0)
+        num_records = meta.get('num_records', 0)
+        if not record_len or not num_records:
+            return aids
+        for i in range(1, num_records + 1):
+            rr = self.csim_send(f'00B2{i:02X}04{record_len:02X}')
+            if not rr.get('sw', '').startswith('90') or not rr.get('data'):
+                continue
+            aid = _parse_dir_record(rr['data'])
+            if aid and aid not in aids:
+                aids.append(aid)
+        return aids
 
     def verify_adm(self, adm_hex: str, key_ref: str = '0A') -> dict:
         """ADM verification — VERIFY PIN via AT+CSIM."""
@@ -170,23 +322,6 @@ class ATModem:
         adm_padded = adm_hex.ljust(16, 'F')[:16]
         apdu = f'002000{key_ref}08{adm_padded}'
         return self.csim_send(apdu)
-
-    def _parse_crsm(self, resp: str) -> dict:
-        """Parse AT+CRSM response."""
-        m = re.search(r'\+CRSM:\s*(\d+),\s*(\d+)(?:,\s*"([^"]*)")?', resp)
-        if not m:
-            if 'ERROR' in resp:
-                return {'success': False, 'sw1': 0, 'sw2': 0, 'data': '',
-                        'error': resp.strip()}
-            return {'success': False, 'sw1': 0, 'sw2': 0, 'data': '',
-                    'error': f'Parse failed: {resp.strip()}'}
-        sw1, sw2 = int(m.group(1)), int(m.group(2))
-        data = m.group(3) or ''
-        success = sw1 == 144 and sw2 == 0
-        result = {'success': success, 'sw1': sw1, 'sw2': sw2, 'data': data}
-        if not success:
-            result['error'] = f'SW={sw1},{sw2} ({sw1:02X}{sw2:02X})'
-        return result
 
     def _parse_csim(self, resp: str) -> dict:
         """Parse AT+CSIM response."""
@@ -199,7 +334,7 @@ class ATModem:
         data = m.group(1).upper()
         sw = data[-4:] if len(data) >= 4 else ''
         payload = data[:-4] if len(data) > 4 else ''
-        success = sw == '9000'
+        success = sw == '9000' or sw.startswith('61') or sw.startswith('9F')
         result = {'success': success, 'sw': sw, 'data': payload}
         if not success:
             result['error'] = f'SW={sw}'
@@ -230,6 +365,70 @@ class ATModem:
                 'serial_number': p.serial_number or '',
             })
         return ports
+
+
+def _cla_for_lchan(lchan: int, proprietary: bool = False) -> int:
+    """Build CLA byte for a given logical channel number.
+    Channels 0~3: basic (0x00|ch or 0x80|ch for proprietary)
+    Channels 4~19: extended (0x40|(ch-4) or 0xC0|(ch-4) for proprietary)"""
+    if lchan <= 3:
+        return (0x80 if proprietary else 0x00) | (lchan & 0x03)
+    else:
+        return (0xC0 if proprietary else 0x40) | ((lchan - 4) & 0x0F)
+
+
+def _extract_aid_from_fcp(hex_data: str) -> str | None:
+    """Extract AID (tag 84) from FCP TLV data."""
+    if not hex_data or len(hex_data) < 4:
+        return None
+    try:
+        b = bytes.fromhex(hex_data)
+        # Skip FCP template tag (62) + length
+        if b[0] != 0x62:
+            return None
+        i = 2
+        if b[1] > 0x80:
+            i = 3
+        end = len(b)
+        while i < end - 1:
+            tag = b[i]
+            i += 1
+            length = b[i]
+            i += 1
+            if tag == 0x84:  # AID
+                return b[i:i+length].hex().upper()
+            i += length
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def _parse_dir_record(hex_data: str) -> str | None:
+    """Parse a single EF.DIR record and extract AID.
+    Record TLV: 61(app template) containing 4F(AID)."""
+    if not hex_data or len(hex_data) < 8:
+        return None
+    data = hex_data.upper().replace(' ', '')
+    # Must start with tag 61
+    if not data.startswith('61'):
+        return None
+    try:
+        i = 2
+        tpl_len = int(data[i:i+2], 16)
+        i += 2
+        end = i + tpl_len * 2
+        while i < end and i < len(data) - 2:
+            tag = data[i:i+2]
+            i += 2
+            length = int(data[i:i+2], 16)
+            i += 2
+            value = data[i:i+length*2]
+            i += length * 2
+            if tag == '4F':
+                return value
+    except (ValueError, IndexError):
+        pass
+    return None
 
 
 def parse_fcp(hex_data: str) -> dict:

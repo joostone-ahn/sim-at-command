@@ -1,6 +1,6 @@
 # 📡 SIM AT Command Tool
 
-A web-based tool for reading, writing, and decoding SIM/USIM card files via AT commands (`AT+CRSM`, `AT+CSIM`) over USB modem port.
+A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via `AT+CSIM` (raw APDU) over USB modem port.
 
 ---
 
@@ -32,16 +32,30 @@ Browser opens automatically at `http://127.0.0.1:8083`.
 ## How to Use
 
 ### 1. Connect
-Select the serial port and click **Connect**. Only modem ports are shown (Serial Port, Diagnostics, Bluetooth, etc. are filtered out).
+Select the serial port and click **Connect**. Only modem ports are shown.
 
-> **Note:** If ADB is available, the connected device model name is shown next to the port name.
+On connect, the tool automatically:
+- Reads **EF.DIR** to discover USIM/ISIM AIDs
+- Scans **logical channels 0–19** (basic + extended) via STATUS command to detect USIM/ISIM channel assignments
+- Falls back to **AT+CCHO/CGLA** for ISIM access on modems that don't support logical channel separation (e.g. MediaTek)
+- Reads **EF.ARR** (MF, USIM, ISIM) for access rule display
+- Reads **ICCID, IMSI, MSISDN** and displays them in the header bar
+
+> If ADB is available, the connected device model name is shown next to the port name.
 
 ### 2. Browse & Read
-The **SIM Files** panel shows 123 EFs from 3GPP TS 31.102 (USIM) and TS 102.221 (MF). Click any EF to read. Use **Search** to filter by FID or name.
+The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF). Click any EF to read. Use **Search** to filter by FID or name.
 
-> **Note:** ADF.ISIM files are currently excluded — AT+CRSM cannot distinguish ISIM FIDs from USIM.
+File access uses `SELECT by path` (`00A40804 7FFF + FID chain`). Previously read files are cached (green dot) and shown instantly on re-click.
 
-### 3. View File Contents
+### 3. APDU Log
+The **APDU Log** panel shows all APDU communication in real-time:
+- **▶** (blue) = sent APDU with CLA/INS color coding
+- **◀** (red) = received data + SW (green=9000, orange=61xx, red=error)
+- Hex formatted 16 bytes per line with aligned indentation
+- Step-by-step text labels: SELECT, READ BINARY, READ RECORD, RETRIEVE DATA, UPDATE BINARY, UPDATE RECORD, DELETE DATA, SET DATA, VERIFY ADM, RE-READ, etc.
+
+### 4. View File Contents
 **Decode / Raw** toggle switches between decoded and raw hex view. **Copy** copies to clipboard (tables as TSV for Excel).
 
 | File Type | Decode View |
@@ -53,17 +67,29 @@ The **SIM Files** panel shows 123 EFs from 3GPP TS 31.102 (USIM) and TS 102.221 
 | URSP | Tree-formatted view |
 | Other EFs | JSON (pySim-based decoding) |
 
-### 4. Verify ADM
-Click **VERIFY ADM** to verify ADM1–ADM4 independently. Status dots show verification state (gray/green). EF.ARR is read on connect — the **Write** button is automatically enabled/disabled based on ARR conditions, with a tooltip showing which ADM key is needed.
+### 5. Verify ADM
+Click **VERIFY ADM** to verify ADM1–ADM4 independently. Status dots show verification state (gray/green). The **Write** button is automatically enabled/disabled based on ARR conditions, with a tooltip showing which ADM key is needed. If no update rule exists in ARR, write is treated as NEVER.
 
-### 5. Write
+### 6. Write
 Click **Write** to open the editor popup:
 
 - **Hex editor** — Direct hex input
 - **PLMN editor** — MCC/MNC/AcT table with Table/Hex toggle
 - **Service table editor** — ON/OFF toggles with Table/Hex toggle
 - **ACC editor** — Class ON/OFF toggles
-- **BER-TLV editor** — Tag-based write with TLV validation (URSP etc.)
+- **BER-TLV editor** — Tag-based write with DELETE DATA + SET DATA (URSP etc.)
+
+---
+
+## Modem Compatibility
+
+| Feature | Qualcomm | MediaTek |
+|---|---|---|
+| AT+CSIM | ✅ | ✅ |
+| Logical channel (CLA) | ✅ (channel scan) | ❌ (ignored) |
+| AID SELECT | ✅ (but not used) | ❌ (CME ERROR) |
+| ISIM access | Via scanned channel | Via AT+CCHO/CGLA fallback |
+| Extended channels (4–19) | Depends on modem | ❌ (6E00) |
 
 ---
 
@@ -74,8 +100,8 @@ run.command / run.bat    # One-click launchers
 requirements.txt         # Python dependencies
 src/
   app.py                 # Flask web server + API
-  at_modem.py            # AT command serial communication
-  sim_files.py           # 3GPP SIM file definitions
+  at_modem.py            # AT+CSIM serial communication
+  sim_files.py           # 3GPP SIM file definitions (MF/USIM/ISIM)
   decoder.py             # pySim-based hex decoder
   templates/
     index.html           # Web GUI (single page)
