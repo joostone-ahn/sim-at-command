@@ -91,8 +91,6 @@ Click **Write** to open the editor popup:
 | ISIM access | Via scanned channel | Via AT+CCHO/CGLA fallback |
 | Extended channels (4–19) | Depends on modem | ❌ (6E00) |
 
-> **Note:** Some 5GS EFs (SUCI_Calc_Info, URSP, CAG, etc.) may return `6A82` (File not found) if the corresponding UST service is disabled. Enable the service in EF.UST first.
-
 ---
 
 ## Project Structure
