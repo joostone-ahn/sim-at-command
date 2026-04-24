@@ -6,12 +6,12 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 ## Modem Compatibility
 
-| Platform | Chipset | AT+CSIM | Logical channel scan (NOTE1) | AID SELECT | AT+CCHO/CGLA | ISIM access | RETRIEVE DATA |
+| Platform | Chipset | AT+CSIM | Channel scan (NOTE1) | AID SELECT | AT+CCHO<br>/CGLA | ISIM<br>access | RETRIEVE<br>DATA |
 |---|---|---|---|---|---|---|---|
-| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) | ❌ (NOTE5) |
-| Android | **Samsung LSI** | ✅ | ✅ (NOTE2) | ✅ | ✅ | Scanned channel (NOTE3) | ✅ |
-| Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO/CGLA (NOTE4) | ✅ |
-| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) | ❌ (NOTE5) |
+| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
+| Android | **Samsung LSI** | ✅ | ✅ (NOTE2) | ✅ | ✅ | Scanned<br>channel (NOTE3) | ✅ |
+| Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO<br>/CGLA (NOTE4) | ✅ |
+| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
 
 > **NOTE1:** The tool sends STATUS (INS=F2) with proprietary CLA on each logical channel (0–19) via AT+CSIM and extracts the AID (tag 84) from the FCP response. If the AID starts with the USIM AID prefix (A0000000871002) or ISIM AID prefix (A0000000871004), that channel number is recorded and used for all subsequent file access on that application.
 
