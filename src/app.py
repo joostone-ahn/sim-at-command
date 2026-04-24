@@ -247,6 +247,24 @@ def _decode_msisdn(hex_data: str) -> str:
 
 
 
+def _enrich_expanded_arr(meta: dict):
+    """If FCP contains expanded security (tag AB), decode it as ARR record."""
+    if not meta or 'arr_record_nr' in meta:
+        return
+    raw = meta.get('security_raw', '')
+    if not raw:
+        return
+    # Expanded security starts with 80 xx (access mode TLV), not ARR FID reference
+    if not raw.startswith('80'):
+        return
+    try:
+        decoded = decode_ef_records('MF/EF.ARR', [raw])
+        if decoded and decoded[0]:
+            meta['expanded_arr'] = decoded[0]
+    except Exception:
+        pass
+
+
 @app.route('/files', methods=['GET'])
 def get_files():
     """Return 3GPP standard SIM file tree."""
@@ -559,6 +577,7 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
     fcp_data = select_result.get('fcp', '')
     if fcp_data:
         meta = parse_fcp(fcp_data)
+    _enrich_expanded_arr(meta)
 
     actual_structure = meta.get('structure', structure)
     file_size = meta.get('file_size', 0)
@@ -684,6 +703,7 @@ def _read_file_ccho(path: str, fid_hex: str, structure: str) -> 'Response':
             fcp_data = gr.get('data', '')
         if fcp_data:
             meta = parse_fcp(fcp_data)
+        _enrich_expanded_arr(meta)
 
         actual_structure = meta.get('structure', structure)
         file_size = meta.get('file_size', 0)

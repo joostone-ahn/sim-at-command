@@ -333,18 +333,23 @@ function getArrCondition(path, accessMode){
     if(!path)return null;
     var cached=readCache[path];if(!cached||!cached.meta)return null;
     var sec=cached.meta.security_raw;
-    if(!sec)return null;
-    // Parse compact security (tag 8C) — already parsed in meta.security
     var secStr=cached.meta.security||'';
-    if(!secStr)return null;
+    // Try expanded ARR first (tag AB)
+    if(cached.meta.expanded_arr){
+        return _extractCondFromArr(cached.meta.expanded_arr,accessMode);
+    }
+    if(!sec)return null;
     // Try to find ARR record from arrData
     var arrRec=_getArrRecordForPath(path);
     if(arrRec)return _extractCondFromArr(arrRec,accessMode);
     // Fallback: parse from compact security
+    if(!secStr)return null;
     return _parseCompactCondition(secStr,accessMode);
 }
 function _getArrRecordForPath(path){
     var cached=readCache[path];if(!cached||!cached.meta)return null;
+    // Expanded security (tag AB) — already decoded in meta
+    if(cached.meta.expanded_arr)return cached.meta.expanded_arr;
     var arrRecNr=cached.meta.arr_record_nr;
     if(!arrRecNr||arrRecNr<=0)return null;
     // Determine which ARR to use based on path
@@ -955,10 +960,10 @@ async function pollApduLog(){
                 block.style.cssText='color:#667eea;font-style:italic;padding:1px 0';
                 block.textContent='── '+e.data;
             }else if(e.dir==='tx'){
-                block.innerHTML='<span style="color:#0066FF;font-weight:700;display:inline-block;width:1.2em;text-align:center">▶</span>'+_fmtApduTx(e.data);
+                block.innerHTML='<span style="color:#0066FF;font-weight:700;display:inline-block;width:1.2em;text-align:center;font-size:0.65em">▶</span>'+_fmtApduTx(e.data);
             }else{
                 var dataAndSw=(e.data||'')+e.sw;
-                block.innerHTML='<span style="color:#e74c3c;font-weight:700;display:inline-block;width:1.2em;text-align:center">◀</span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
+                block.innerHTML='<span style="color:#e74c3c;font-weight:700;display:inline-block;width:1.2em;text-align:center;font-size:0.65em">◀</span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
             }
             el.appendChild(block);
         });
