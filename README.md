@@ -74,7 +74,13 @@ On connect, the tool automatically:
 - Reads **EF.ARR** (MF, USIM, ISIM) to display access rules for each EF — shows which ADM key must be verified before writing
 
 ### 2. Browse & Read
-The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF). Click any EF to read. Use **Search** to filter by FID or name. Each file shows a status dot: 🟢 green = read successfully (re-click shows cached value), 🔴 red = read failed (re-click retries).
+The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF).
+
+- Click any EF to read
+- Use **Search** to filter by FID or name
+- Each file has a status dot indicating read state:
+  - 🟢 green = read successfully (re-click shows cached value)
+  - 🔴 red = read failed (re-click retries)
 
 ### 3. APDU Log
 The **APDU Log** panel shows all APDU communication in real-time:
