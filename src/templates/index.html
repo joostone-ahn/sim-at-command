@@ -960,10 +960,10 @@ async function pollApduLog(){
                 block.style.cssText='color:#667eea;font-style:italic;padding:1px 0';
                 block.textContent='── '+e.data;
             }else if(e.dir==='tx'){
-                block.innerHTML='<span style="color:#0066FF;font-weight:700;display:inline-block;width:1.2em;text-align:center;font-size:0.65em">▶</span>'+_fmtApduTx(e.data);
+                block.innerHTML='<span style="color:#0066FF;font-weight:700">&gt; </span>'+_fmtApduTx(e.data);
             }else{
                 var dataAndSw=(e.data||'')+e.sw;
-                block.innerHTML='<span style="color:#e74c3c;font-weight:700;display:inline-block;width:1.2em;text-align:center;font-size:0.65em">◀</span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
+                block.innerHTML='<span style="color:#e74c3c;font-weight:700">&lt; </span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
             }
             el.appendChild(block);
         });
@@ -987,7 +987,8 @@ function _fmtHexBlock(hex,indent){
     for(var i=0;i<bytes.length;i+=16){
         lines.push(bytes.slice(i,i+16).join(' '));
     }
-    return '<span style="color:#555">'+lines.join('\n<span style="display:inline-block;width:1.2em"></span>')+'</span>';
+    var pad='\n'+' '.repeat(indent);
+    return '<span style="color:#555">'+lines.join(pad)+'</span>';
 }
 function _fmtHexBlockRx(hex,indent,sw){
     // Format hex with SW highlighted at the end
@@ -1012,7 +1013,8 @@ function _fmtHexBlockRx(hex,indent,sw){
         }
         lines.push(parts.join(' '));
     }
-    return '<span style="color:#555">'+lines.join('\n<span style="display:inline-block;width:1.2em"></span>')+'</span>';
+    var pad='\n'+' '.repeat(indent);
+    return '<span style="color:#555">'+lines.join(pad)+'</span>';
 }
 async function clearApduLog(){document.getElementById('apduLog').innerHTML='';await api('/apdu_log_clear',{});_apduLogIdx=0;}
 function copyApduLog(btn){var el=document.getElementById('apduLog');navigator.clipboard.writeText(el.innerText||el.textContent||'');if(btn){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);}}
