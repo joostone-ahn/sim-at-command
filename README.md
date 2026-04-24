@@ -6,10 +6,10 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 ## Modem Compatibility
 
-| Platform | Chipset | AT+CSIM | Channel scan (NOTE1) | AID SELECT | AT+CCHO<br>/CGLA | ISIM<br>access | RETRIEVE<br>DATA |
+| Platform | Chipset | AT+CSIM | Logical<br>channel<br>scan (NOTE1) | AID SELECT | AT+CCHO<br>/CGLA | ISIM<br>access | RETRIEVE<br>DATA |
 |---|---|---|---|---|---|---|---|
 | Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
-| Android | **Samsung LSI** | ✅ | ✅ (NOTE2) | ✅ | ✅ | Scanned<br>channel (NOTE3) | ✅ |
+| Android | **Samsung LSI** | ✅ | ✅<br>(NOTE2) | ✅ | ✅ | Scanned<br>channel (NOTE3) | ✅ |
 | Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO<br>/CGLA (NOTE4) | ✅ |
 | iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
 
