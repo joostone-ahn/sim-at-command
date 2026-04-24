@@ -93,16 +93,19 @@ class ATModem:
         return resp
 
     def at_check(self) -> dict:
-        """Verify AT, read EF.DIR for AIDs, scan channels, CCHO fallback."""
+        """Verify AT, scan channels, CCHO fallback with EF.DIR if needed."""
         try:
             resp = self._send('AT')
             if 'OK' not in resp:
                 return {'success': False, 'error': 'No AT response'}
-            # 1. Read EF.DIR first to get full AIDs
-            aids = self.read_ef_dir()
-            # 2. Scan channels to find USIM/ISIM
-            channels = self.scan_channels(aids)
-            return {'success': True, 'csim': True, 'aids': aids, 'channels': channels}
+            # 1. Scan channels to find USIM/ISIM
+            channels = self.scan_channels([])
+            # 2. If ISIM not found via scan, read EF.DIR and return AIDs for CCHO fallback
+            dir_result = {'aids': [], 'meta': {}, 'records': []}
+            if 'isim' not in channels:
+                dir_result = self.read_ef_dir()
+            return {'success': True, 'csim': True, 'aids': dir_result['aids'],
+                    'channels': channels, 'dir': dir_result}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
@@ -116,6 +119,7 @@ class ATModem:
         sw = result.get('sw', '')
         # Auto GET RESPONSE for SW 61xx
         if sw.startswith('61'):
+            self._log_apdu('rx', result.get('data', ''), sw)
             le = sw[2:4]
             orig_cla = int(apdu_hex[:2], 16)
             if orig_cla & 0x40:
@@ -123,6 +127,7 @@ class ATModem:
             else:
                 get_resp_cla = 0x00 | (orig_cla & 0x03)
             get_resp = f'{get_resp_cla:02X}C00000{le}'
+            self._log_apdu('tx', get_resp)
             resp2 = self._send(f'AT+CSIM={len(get_resp)},"{get_resp}"')
             result2 = self._parse_csim(resp2)
             result2['data'] = result.get('data', '') + result2.get('data', '')
@@ -264,36 +269,39 @@ class ATModem:
             result['error'] = f'SW={sw}'
         return result
 
-    def read_ef_dir(self) -> list[str]:
+    def read_ef_dir(self) -> dict:
         """Read EF.DIR (2F00) via AT+CSIM and extract AIDs from all records.
-        Returns list of AID hex strings."""
-        aids = []
+        Returns {'aids': [...], 'meta': {...}, 'records': [...]} for cache."""
+        result = {'aids': [], 'meta': {}, 'records': []}
         # SELECT MF
         r = self.csim_send('00A40004023F00')
         sw = r.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
-            return aids
+            return result
         # SELECT EF.DIR (2F00)
         r = self.csim_send('00A40004022F00')
         sw = r.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
-            return aids
+            return result
         fcp_data = r.get('data', '')
         if not fcp_data:
-            return aids
+            return result
         meta = parse_fcp(fcp_data)
+        result['meta'] = meta
         record_len = meta.get('record_len', 0)
         num_records = meta.get('num_records', 0)
         if not record_len or not num_records:
-            return aids
+            return result
         for i in range(1, num_records + 1):
             rr = self.csim_send(f'00B2{i:02X}04{record_len:02X}')
             if not rr.get('sw', '').startswith('90') or not rr.get('data'):
+                result['records'].append(None)
                 continue
+            result['records'].append(rr['data'])
             aid = _parse_dir_record(rr['data'])
-            if aid and aid not in aids:
-                aids.append(aid)
-        return aids
+            if aid and aid not in result['aids']:
+                result['aids'].append(aid)
+        return result
 
     def verify_adm(self, adm_hex: str, key_ref: str = '0A') -> dict:
         """ADM verification — VERIFY PIN via AT+CSIM."""
