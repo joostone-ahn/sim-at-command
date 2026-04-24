@@ -138,6 +138,9 @@ def read_info():
     imsi_meta = {}
     msisdn_meta = {}
     msisdn_reclen = 0
+    msisdn_numrecs = 0
+    msisdn_all_hex = []
+    msisdn_decoded = []
     lchan = usim_lchan
     try:
         # Read ICCID (MF/2FE2, transparent)
@@ -170,11 +173,19 @@ def read_info():
             fcp = sel.get('fcp', '')
             msisdn_meta = parse_fcp(fcp) if fcp else {}
             msisdn_reclen = msisdn_meta.get('record_len', 0)
-            if msisdn_reclen:
-                r = modem.csim_read_record(1, msisdn_reclen, lchan=lchan)
-                if r.get('sw', '').startswith('90') and r.get('data'):
-                    msisdn_hex = r['data']
-                    msisdn = _decode_msisdn(msisdn_hex)
+            msisdn_numrecs = msisdn_meta.get('num_records', 0)
+            if msisdn_reclen and msisdn_numrecs:
+                msisdn_all_hex = []
+                for i in range(1, msisdn_numrecs + 1):
+                    r = modem.csim_read_record(i, msisdn_reclen, lchan=lchan)
+                    if r.get('sw', '').startswith('90') and r.get('data'):
+                        msisdn_all_hex.append(r['data'])
+                        if i == 1:
+                            msisdn_hex = r['data']
+                            msisdn = _decode_msisdn(msisdn_hex)
+                    else:
+                        msisdn_all_hex.append(None)
+                msisdn_decoded = decode_ef_records('ADF.USIM/EF.MSISDN', msisdn_all_hex)
     except Exception:
         pass
     return jsonify({
@@ -183,6 +194,9 @@ def read_info():
         '_imsi_hex': imsi_hex, '_imsi_meta': imsi_meta,
         '_msisdn_hex': msisdn_hex, '_msisdn_meta': msisdn_meta,
         '_msisdn_reclen': msisdn_reclen,
+        '_msisdn_all_hex': msisdn_all_hex,
+        '_msisdn_numrecs': msisdn_numrecs,
+        '_msisdn_decoded': msisdn_decoded,
     })
 
 

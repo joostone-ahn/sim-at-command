@@ -517,7 +517,7 @@ async function doConnect(){
     // Cache for green dots
     if(info.iccid){readCache['MF/EF.ICCID']={success:true,structure:'transparent',data:info._iccid_hex||'',decoded:{iccid:info.iccid},meta:info._iccid_meta||{}};}
     if(info.imsi){readCache['ADF.USIM/EF.IMSI']={success:true,structure:'transparent',data:info._imsi_hex||'',decoded:{imsi:info.imsi},meta:info._imsi_meta||{}};}
-    if(info.msisdn){readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:[info._msisdn_hex||''],decoded:[{msisdn:info.msisdn}],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:1};}
+    if(info.msisdn||info._msisdn_all_hex){var mData=info._msisdn_all_hex||[info._msisdn_hex||''];var mNum=info._msisdn_numrecs||mData.length;readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:mData,decoded:info._msisdn_decoded||[],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:mNum};}
     // Cache EF.DIR if read during fallback
     if(at.dir&&at.dir.records&&at.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:at.dir.records,meta:at.dir.meta||{},record_len:(at.dir.meta||{}).record_len||0,num_records:at.dir.records.length};}
     apduLogMsg('Connected ✅');

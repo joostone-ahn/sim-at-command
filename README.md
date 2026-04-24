@@ -6,12 +6,12 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 ## Modem Compatibility
 
-| Platform | Chipset | AT+CSIM | Logical channel scan (NOTE1) | AID SELECT | AT+CCHO/CGLA | ISIM access |
-|---|---|---|---|---|---|---|
-| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) |
-| Android | **Samsung LSI** | ✅ | ✅ (NOTE2) | ✅ | ✅ | Scanned channel (NOTE3) |
-| Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO/CGLA (NOTE4) |
-| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) |
+| Platform | Chipset | AT+CSIM | Logical channel scan (NOTE1) | AID SELECT | AT+CCHO/CGLA | ISIM access | RETRIEVE DATA |
+|---|---|---|---|---|---|---|---|
+| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) | ❌ (NOTE5) |
+| Android | **Samsung LSI** | ✅ | ✅ (NOTE2) | ✅ | ✅ | Scanned channel (NOTE3) | ✅ |
+| Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO/CGLA (NOTE4) | ✅ |
+| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned channel (NOTE3) | ❌ (NOTE5) |
 
 > **NOTE1:** The tool sends STATUS (INS=F2) with proprietary CLA on each logical channel (0–19) via AT+CSIM and extracts the AID (tag 84) from the FCP response. If the AID starts with the USIM AID prefix (A0000000871002) or ISIM AID prefix (A0000000871004), that channel number is recorded and used for all subsequent file access on that application.
 
@@ -20,6 +20,8 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 > **NOTE3:** ISIM files are accessed by setting the CLA byte to the scanned ISIM logical channel number (e.g. CLA=01 for channel 1) in AT+CSIM APDUs. No separate session management is needed.
 
 > **NOTE4:** When logical channel scan is not supported, the tool falls back to AT+CCHO (3GPP TS 27.007 Section 8.45) to open a session by ISIM AID, then sends APDUs via AT+CGLA (Section 8.46) on that session. The modem manages channel assignment internally.
+
+> **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which does not support RETRIEVE DATA (INS=CB). BER-TLV EFs (e.g. EF.URSP) cannot be read via AT command on Qualcomm chipsets. Use a Samsung LSI or MediaTek device, or a PC/SC card reader ([sim-reader](https://github.com/joostone-ahn/sim-reader)) instead.
 
 ---
 
