@@ -76,8 +76,8 @@ The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), 
 
 ### 3. APDU Log
 The **APDU Log** panel shows all APDU communication in real-time:
-- **▶** (blue) = sent APDU with CLA/INS color coding
-- **◀** (red) = received data + SW (green=9000, red=error)
+- **>>** (blue) = sent APDU with CLA/INS color coding
+- **<<** (red) = received data + SW (green=9000, red=error)
 - Hex formatted 16 bytes per line with aligned indentation
 - Step-by-step text labels: SELECT, READ BINARY, READ RECORD, RETRIEVE DATA, UPDATE BINARY, UPDATE RECORD, DELETE DATA, SET DATA, VERIFY ADM, RE-READ, etc.
 
