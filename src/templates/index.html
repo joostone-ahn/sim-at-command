@@ -6,9 +6,10 @@
 <title>SIM AT Command Tool</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+:root{--mono:'SFMono-Regular','Cascadia Mono','Consolas','DejaVu Sans Mono','Menlo','Courier New',monospace}
 body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;color:#333;display:flex;flex-direction:column;overflow:hidden;height:100vh}
 .container{max-width:100%;padding:10px 12px 0 12px;flex:1;overflow:hidden;display:flex;flex-direction:column}
-.mono{font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
+.mono{font-family:var(--mono)}
 .header{background:rgba(255,255,255,0.95);border-radius:10px;padding:10px 20px;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:16px}
 .header h1{font-size:1.2rem;color:#2c3e50;font-weight:700;white-space:nowrap}
 .btn{padding:5px 14px;border:none;border-radius:6px;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:4px;text-align:center}
@@ -19,7 +20,7 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
 .btn-danger{background:linear-gradient(45deg,#e74c3c,#c0392b);color:white}
 .btn-dark{background:#f0f2f5;color:#555;border:1px solid #ddd}.btn-dark:hover:not(:disabled){background:#e8eaed}
 .btn-warning{background:linear-gradient(45deg,#e67e22,#f39c12);color:white}
-.input-sm{padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:0.76rem;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
+.input-sm{padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:0.76rem;font-family:var(--mono)}
 .input-sm:focus{outline:none;border-color:#667eea}
 select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .status-badge{font-size:0.72rem;padding:3px 8px;border-radius:4px;font-weight:600}
@@ -36,7 +37,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .tree-group-header:hover{background:#e8ecf8}
 .tree-group-arrow{font-size:0.6rem;transition:transform 0.2s;width:12px;text-align:center;color:#999}
 .tree-group-arrow.open{transform:rotate(90deg)}
-.tree-item{padding:3px 12px 3px 28px;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:2px solid transparent;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
+.tree-item{padding:3px 12px 3px 28px;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:2px solid transparent;font-family:var(--mono)}
 .tree-item:hover{background:#f5f7ff}
 .tree-item.selected{background:#eef2ff;border-left-color:#667eea;font-weight:600}
 .tree-item.df-item{color:#764ba2;font-weight:600;padding-left:20px;font-family:'Segoe UI',sans-serif}
@@ -47,12 +48,12 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .tree-item .read-dot.unread{background:#ddd}.tree-item .read-dot.read-ok{background:#27ae60}.tree-item .read-dot.read-err{background:#e74c3c}
 .detail-empty{display:flex;align-items:center;justify-content:center;flex:1;color:#bbb;font-size:0.8rem}
 .detail-meta{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.74rem;padding:10px 12px}
-.detail-meta dt{color:#888;font-weight:600}.detail-meta dd{color:#333;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace}
-.hex-display{background:#fff;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;color:#2c3e50;word-break:break-all;line-height:1.5;white-space:pre-wrap;padding:15px 15px 15px 20px;border:none;border-radius:0}
+.detail-meta dt{color:#888;font-weight:600}.detail-meta dd{color:#333;font-family:var(--mono)}
+.hex-display{background:#fff;font-family:var(--mono);font-size:0.74rem;color:#2c3e50;word-break:break-all;line-height:1.5;white-space:pre-wrap;padding:15px 15px 15px 20px;border:none;border-radius:0}
 .rec-table{width:auto;border-collapse:collapse;font-size:0.74rem}
 .rec-table th{background:#f0f4ff;color:#667eea;padding:3px 8px;text-align:left;font-weight:600;position:sticky;top:0;border-bottom:1px solid #e0e0e0;z-index:1;white-space:nowrap}
 .rec-table th:first-child{text-align:center;width:38px}
-.rec-table td{padding:3px 8px;border-bottom:1px solid #f0f0f0;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;color:#333;white-space:nowrap}
+.rec-table td{padding:3px 8px;border-bottom:1px solid #f0f0f0;font-family:var(--mono);color:#333;white-space:nowrap}
 .rec-table td:first-child{color:#667eea;font-weight:600;width:38px;text-align:center}
 .rec-table th:not(:first-child),.rec-table td:not(:first-child){padding-left:6px;padding-right:12px}
 .resizer{width:6px;cursor:col-resize;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -62,7 +63,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100;justify-content:center;align-items:center}
 .overlay.show{display:flex}
 .popup{background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
-.json-hl{margin:0;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;white-space:pre;line-height:1.4}
+.json-hl{margin:0;font-family:var(--mono);font-size:0.74rem;white-space:pre;line-height:1.4}
 .json-key{color:#881391}.json-string{color:#0451a5}.json-number{color:#098658}.json-boolean{color:#0000ff}.json-null{color:#808080}
 .svc-mode-active{background:#667eea!important;color:white!important;border-radius:4px}
 .toggle-switch{display:flex;background:#e9ecef;border-radius:4px;cursor:pointer;overflow:hidden;width:fit-content}
@@ -76,7 +77,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 .detail-section{margin-bottom:0;background:#fff;border-bottom:1px solid #e9ecef;overflow:hidden}
 .detail-section:last-child{border-bottom:none}
 .detail-section-title{font-size:0.80rem;font-weight:700;color:#667eea;padding:8px 12px;background:#fff;border-bottom:1px solid #e9ecef;margin-bottom:0}
-.tree-display{font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.74rem;white-space:pre;line-height:1.3;color:#333;padding:15px 15px 15px 20px}
+.tree-display{font-family:var(--mono);font-size:0.74rem;white-space:pre;line-height:1.3;color:#333;padding:15px 15px 15px 20px}
 .data-wrap{background:#fff;border-radius:6px;display:inline-block}
 </style>
 </head>
@@ -99,11 +100,11 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="simInfoArea" style="display:none;align-items:center;gap:10px">
             <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
             <div style="display:flex;align-items:center;gap:10px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
-                <span id="simIccid" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
+                <span id="simIccid" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
                 <div id="simIccidSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0;display:none"></div>
-                <span id="simImsi" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
+                <span id="simImsi" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
                 <div id="simMsisdnSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
-                <span id="simMsisdn" style="display:flex;align-items:center;font-size:0.70rem;font-family:Consolas,monospace"></span>
+                <span id="simMsisdn" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
             </div>
         </div>
         <div id="admArea" style="display:none;align-items:center;gap:10px">
@@ -111,7 +112,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             <div style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
                 <button class="btn" id="btnAdm" onclick="openAdmPopup()" style="white-space:nowrap;height:22px;font-size:0.68rem;background:#f0f2f5;color:#555;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0 10px;line-height:22px;box-sizing:border-box">🔐 VERIFY ADM</button>
                 <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
-                <div id="admDotsArea" style="display:flex;align-items:center;gap:8px;font-size:0.70rem;font-family:Consolas,monospace;color:#666">
+                <div id="admDotsArea" style="display:flex;align-items:center;gap:8px;font-size:0.70rem;font-family:var(--mono);color:#666">
                     <span><span id="admDot1" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM1</span>
                     <span><span id="admDot2" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM2</span>
                     <span><span id="admDot3" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM3</span>
@@ -130,7 +131,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                     <button class="btn btn-dark" onclick="clearApduLog()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:2px 8px;font-size:0.66rem;min-width:50px">🗑 Clear</button>
                 </div>
             </div>
-            <div id="apduLog" style="flex:1;overflow-y:auto;background:#fff;padding:2px 10px;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;font-size:0.72rem;line-height:1.3;color:#333"></div>
+            <div id="apduLog" style="flex:1;overflow-y:auto;background:#fff;padding:2px 10px;font-family:var(--mono);font-size:0.72rem;line-height:1.3;color:#333"></div>
         </div>
         <div class="card" id="leftPanel" style="flex:2;min-width:205px;max-width:365px;display:flex;flex-direction:column">
             <div class="panel-title" style="min-height:36px;padding:6px 12px">
@@ -138,7 +139,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                 <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
                     <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:5px;padding:2px 8px;height:24px;width:160px">
                         <span style="font-size:0.66rem;font-weight:600;color:rgba(255,255,255,0.9);white-space:nowrap;min-width:42px">Search</span>
-                        <input type="text" id="searchInput" oninput="filterTree();toggleSearchClear()" placeholder="FID or Name" style="border:none;background:transparent;color:white;font-size:0.66rem;font-family:'Menlo','Consolas','DejaVu Sans Mono','Courier New',monospace;flex:1;min-width:0;outline:none" class="search-ph">
+                        <input type="text" id="searchInput" oninput="filterTree();toggleSearchClear()" placeholder="FID or Name" style="border:none;background:transparent;color:white;font-size:0.66rem;font-family:var(--mono);flex:1;min-width:0;outline:none" class="search-ph">
                         <span id="searchClear" onclick="clearSearch()" style="display:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;font-weight:700;flex-shrink:0">✕</span>
                     </div>
                 </div>
@@ -179,7 +180,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="admRow1" class="adm-row" data-key="ADM1">
             <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:4px 10px">
                 <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM1</span>
-                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:var(--mono);padding:3px 4px;outline:none">
                 <span class="adm-count" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
                 <button class="btn adm-verify-btn" onclick="doAdmVerify(this,'ADM1')" disabled style="padding:4px 10px;font-size:0.72rem;min-width:70px;background:linear-gradient(45deg,#333,#555);color:white;border:none;border-radius:6px">Verify</button>
             </div>
@@ -187,7 +188,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="admRow2" class="adm-row" data-key="ADM2">
             <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:4px 10px">
                 <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM2</span>
-                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:var(--mono);padding:3px 4px;outline:none">
                 <span class="adm-count" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
                 <button class="btn adm-verify-btn" onclick="doAdmVerify(this,'ADM2')" disabled style="padding:4px 10px;font-size:0.72rem;min-width:70px;background:linear-gradient(45deg,#333,#555);color:white;border:none;border-radius:6px">Verify</button>
             </div>
@@ -195,7 +196,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="admRow3" class="adm-row" data-key="ADM3">
             <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:4px 10px">
                 <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM3</span>
-                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:var(--mono);padding:3px 4px;outline:none">
                 <span class="adm-count" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
                 <button class="btn adm-verify-btn" onclick="doAdmVerify(this,'ADM3')" disabled style="padding:4px 10px;font-size:0.72rem;min-width:70px;background:linear-gradient(45deg,#333,#555);color:white;border:none;border-radius:6px">Verify</button>
             </div>
@@ -203,7 +204,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="admRow4" class="adm-row" data-key="ADM4">
             <div style="display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:6px;padding:4px 10px">
                 <span style="font-size:0.72rem;font-weight:600;color:#888;min-width:42px">ADM4</span>
-                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:Consolas,monospace;padding:3px 4px;outline:none">
+                <input type="text" class="adm-input" placeholder="16-digit hex" oninput="updateAdmRow(this)" style="border:none;background:transparent;flex:1;font-size:0.78rem;font-family:var(--mono);padding:3px 4px;outline:none">
                 <span class="adm-count" style="font-size:0.66rem;color:#bbb;white-space:nowrap">(0/16)</span>
                 <button class="btn adm-verify-btn" onclick="doAdmVerify(this,'ADM4')" disabled style="padding:4px 10px;font-size:0.72rem;min-width:70px;background:linear-gradient(45deg,#333,#555);color:white;border:none;border-radius:6px">Verify</button>
             </div>
@@ -224,7 +225,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
     <div style="padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:hidden">
         <div id="writeRecordRow" style="display:none">
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Record Number</div>
-            <select id="writeRecordSelect" onchange="onWriteRecordChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Menlo,Consolas,monospace"></select>
+            <select id="writeRecordSelect" onchange="onWriteRecordChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:var(--mono)"></select>
         </div>
         <div id="writeServiceTable" style="display:none;flex-direction:column;min-height:0;flex:1">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -236,7 +237,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writeServiceList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writeServiceHex" style="display:none;flex:1">
-                <textarea id="writeServiceHexInput" rows="3" oninput="onServiceHexInput();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
+                <textarea id="writeServiceHexInput" rows="3" oninput="onServiceHexInput();autoResize(this)" style="width:100%;font-family:var(--mono);font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
             </div>
         </div>
         <div id="writePlmnSection" style="display:none;flex-direction:column;min-height:0;flex:1">
@@ -249,7 +250,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
             <div id="writePlmnList" style="flex:1;overflow-y:auto;border:1px solid #ddd;border-radius:6px;font-size:0.72rem"></div>
             <div id="writePlmnHex" style="display:none;flex:1">
-                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
+                <textarea id="writePlmnHexInput" oninput="onPlmnHexInput();autoResize(this)" style="width:100%;font-family:var(--mono);font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px"></textarea>
             </div>
         </div>
         <div id="writeAccSection" style="display:none">
@@ -259,17 +260,17 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div id="writeHexRow" style="flex:1;display:flex;flex-direction:column">
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span id="writeEfSize" style="font-weight:400;color:#888"></span></div>
             <div style="position:relative;flex:1">
-                <textarea id="writeHexInput" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px" oninput="checkWriteChanged();autoResize(this)"></textarea>
+                <textarea id="writeHexInput" style="width:100%;font-family:var(--mono);font-size:0.82rem;padding:8px 8px 20px 8px;border:1px solid #ddd;border-radius:6px;resize:none;box-sizing:border-box;overflow:hidden;min-height:60px" oninput="checkWriteChanged();autoResize(this)"></textarea>
                 <span id="writeHexCount" style="position:absolute;right:10px;bottom:8px;font-size:0.66rem;color:#bbb"></span>
             </div>
         </div>
         <div id="writeTlvSection" style="display:none">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
                 <span style="font-size:0.76rem;font-weight:600;color:#555">Tag</span>
-                <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:Menlo,Consolas,monospace"></select>
+                <select id="writeTlvTagSelect" onchange="onTlvTagChange()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.78rem;font-family:var(--mono)"></select>
             </div>
             <div style="font-size:0.76rem;font-weight:600;color:#555;margin-bottom:4px">Hex Data <span style="font-weight:400;color:#aaa;font-size:0.68rem">— Full TLV format: tag (80) + BER length + value</span></div>
-            <textarea id="writeTlvHexInput" rows="3" oninput="checkTlvChanged();autoResize(this)" style="width:100%;font-family:Menlo,Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;overflow:hidden;min-height:60px"></textarea>
+            <textarea id="writeTlvHexInput" rows="3" oninput="checkTlvChanged();autoResize(this)" style="width:100%;font-family:var(--mono);font-size:0.82rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:none;overflow:hidden;min-height:60px"></textarea>
             <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
                 <button class="btn btn-primary" id="writeTlvWriteBtn" onclick="tlvWrite()" disabled style="padding:4px 10px;font-size:0.72rem;font-weight:600;min-width:80px">✏️ Write</button>
                 <span id="writeTlvStatus" style="font-size:0.72rem"></span>
@@ -500,7 +501,7 @@ async function doConnect(){
     var info=await api('/read_info',{});
     if(info.iccid||info.imsi||info.msisdn){
         var lbl='<span class="setup-label" style="min-width:auto;padding:0 8px 0 4px">';
-        var val='<span style="font-weight:600;color:#333;font-size:0.72rem;font-family:Consolas,monospace">';
+        var val='<span style="font-weight:600;color:#333;font-size:0.72rem;font-family:var(--mono)">';
         document.getElementById('simIccid').innerHTML=info.iccid?(lbl+'ICCID</span>'+val+info.iccid+'</span>'):'';
         document.getElementById('simIccidSep').style.display=(info.iccid&&info.imsi)?'':'none';
         document.getElementById('simImsi').innerHTML=info.imsi?(lbl+'IMSI</span>'+val+info.imsi+'</span>'):'';
@@ -892,7 +893,7 @@ async function renderServiceTable(){
     const resp=await api('/service_map',{ef:efName});if(!resp.success||!resp.map)return;writeServiceMap=resp.map;
     const rawHex=(typeof r.data==='string')?r.data.toUpperCase().replace(/\s/g,''):'';const bits=hexToBits(rawHex);writeServiceOrig=JSON.parse(JSON.stringify(bits));
     let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="width:40px;padding:3px 6px;text-align:center;background:#fff;font-size:0.70rem">#</th><th style="padding:3px 8px;text-align:left;background:#fff;font-size:0.70rem">Service</th><th style="width:80px;padding:3px 10px 3px 6px;text-align:center;background:#fff;font-size:0.70rem">Status</th></tr></thead><tbody>';
-    Object.keys(writeServiceMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(num=>{const label=writeServiceMap[num],enabled=!!bits[parseInt(num)];html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;});
+    Object.keys(writeServiceMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(num=>{const label=writeServiceMap[num],enabled=!!bits[parseInt(num)];html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px 6px;text-align:center;color:#888;font-family:var(--mono)">${num}</td><td style="padding:3px 8px;font-size:0.72rem">${label}</td><td style="padding:3px 10px 3px 6px;text-align:center"><select data-svc="${num}" onchange="onServiceChange()" style="font-size:0.70rem;padding:1px 4px;border:1px solid #ddd;border-radius:3px"><option value="true"${enabled?' selected':''}>True</option><option value="false"${!enabled?' selected':''}>False</option></select></td></tr>`;});
     html+='</tbody></table>';document.getElementById('writeServiceList').innerHTML=html;
 }
 function onServiceChange(){const bits={};document.querySelectorAll('#writeServiceList select').forEach(s=>bits[parseInt(s.getAttribute('data-svc'))]=(s.value==='true'));let changed=false;for(const k in writeServiceOrig)if(!!bits[k]!==!!writeServiceOrig[k]){changed=true;break;}const newHex=bitsToHex(bits,Math.ceil(writeExpectedSize/2));document.getElementById('writeHexInput').value=newHex;document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';document.getElementById('writeSubmitBtn').disabled=!changed;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';document.getElementById('writeServiceHexInput').value=newHex;}
@@ -903,7 +904,7 @@ function onServiceHexInput(){const cur=document.getElementById('writeServiceHexI
 let plmnOrigEntries=[];
 function renderPlmnEditor(){const f=selectedFile,r=readCache[f.path];if(!r||!r.data)return;const withAcT=hasAcT(f.name);const entries=parsePlmnList(r.data,withAcT);plmnOrigEntries=JSON.parse(JSON.stringify(entries));
     let html='<table style="width:auto;border-collapse:collapse"><thead><tr><th style="width:36px;padding:3px 6px;text-align:center;background:#fff;font-size:0.70rem">#</th><th style="padding:3px 8px;background:#fff;font-size:0.70rem">MCC</th><th style="padding:3px 8px;background:#fff;font-size:0.70rem">MNC</th>';if(withAcT)html+='<th style="padding:3px 8px;background:#fff;font-size:0.70rem">AcT</th>';html+='</tr></thead><tbody>';
-    entries.forEach((e,i)=>{html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:Menlo,Consolas,monospace;font-size:0.70rem">${i+1}</td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:Menlo,Consolas,monospace;font-size:0.74rem;text-align:center"></td>`;html+='</tr>';});
+    entries.forEach((e,i)=>{html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:2px 6px;text-align:center;color:#888;font-family:var(--mono);font-size:0.70rem">${i+1}</td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mcc" value="${e.mcc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:0.74rem;text-align:center"></td><td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="mnc" value="${e.mnc}" maxlength="3" oninput="onPlmnEdit()" style="width:40px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:0.74rem;text-align:center"></td>`;if(withAcT)html+=`<td style="padding:2px 4px"><input type="text" data-idx="${i}" data-field="act" value="${e.act}" maxlength="4" oninput="onPlmnEdit()" style="width:50px;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:0.74rem;text-align:center"></td>`;html+='</tr>';});
     html+='</tbody></table>';document.getElementById('writePlmnList').innerHTML=html;}
 function plmnEditorToHex(){const f=selectedFile;const withAcT=hasAcT(f.name);const inputs=document.querySelectorAll('#writePlmnList input');const map={};inputs.forEach(inp=>{const idx=inp.getAttribute('data-idx'),field=inp.getAttribute('data-field');if(!map[idx])map[idx]={mcc:'',mnc:'',act:''};map[idx][field]=inp.value.trim();});let hex='';Object.keys(map).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(idx=>{const e=map[idx];if(!e.mcc&&!e.mnc){hex+=withAcT?'FFFFFF0000':'FFFFFF';}else{hex+=encodePlmn(e.mcc,e.mnc);if(withAcT)hex+=(e.act||'0000').padEnd(4,'0');}});return hex.toUpperCase();}
 function onPlmnEdit(){const newHex=plmnEditorToHex();document.getElementById('writeHexInput').value=newHex;writeExpectedSize=writeOrigHex.length;document.getElementById('writeHexCount').textContent='('+newHex.length+'/'+writeExpectedSize+')';const changed=newHex!==writeOrigHex;document.getElementById('writeSubmitBtn').disabled=!changed;document.getElementById('writeRestoreBtn').disabled=!changed;document.getElementById('writeStatus').innerHTML='';document.getElementById('writePlmnHexInput').value=newHex;}
@@ -954,10 +955,10 @@ async function pollApduLog(){
                 block.style.cssText='color:#667eea;font-style:italic;padding:1px 0';
                 block.textContent='── '+e.data;
             }else if(e.dir==='tx'){
-                block.innerHTML='<span style="color:#0066FF;font-weight:700">▶ </span>'+_fmtApduTx(e.data);
+                block.innerHTML='<span style="color:#0066FF;font-weight:700;display:inline-block;width:1.2em;text-align:center">▶</span>'+_fmtApduTx(e.data);
             }else{
                 var dataAndSw=(e.data||'')+e.sw;
-                block.innerHTML='<span style="color:#e74c3c;font-weight:700">◀ </span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
+                block.innerHTML='<span style="color:#e74c3c;font-weight:700;display:inline-block;width:1.2em;text-align:center">◀</span>'+_fmtHexBlockRx(dataAndSw,2,e.sw);
             }
             el.appendChild(block);
         });
@@ -981,8 +982,7 @@ function _fmtHexBlock(hex,indent){
     for(var i=0;i<bytes.length;i+=16){
         lines.push(bytes.slice(i,i+16).join(' '));
     }
-    var pad='\n'+' '.repeat(indent);
-    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+    return '<span style="color:#555">'+lines.join('\n<span style="display:inline-block;width:1.2em"></span>')+'</span>';
 }
 function _fmtHexBlockRx(hex,indent,sw){
     // Format hex with SW highlighted at the end
@@ -1007,8 +1007,7 @@ function _fmtHexBlockRx(hex,indent,sw){
         }
         lines.push(parts.join(' '));
     }
-    var pad='\n'+' '.repeat(indent);
-    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+    return '<span style="color:#555">'+lines.join('\n<span style="display:inline-block;width:1.2em"></span>')+'</span>';
 }
 async function clearApduLog(){document.getElementById('apduLog').innerHTML='';await api('/apdu_log_clear',{});_apduLogIdx=0;}
 function copyApduLog(btn){var el=document.getElementById('apduLog');navigator.clipboard.writeText(el.innerText||el.textContent||'');if(btn){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);}}
