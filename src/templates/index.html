@@ -304,7 +304,6 @@ let admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
 let arrData={};  // {'MF/EF.ARR': [{decoded records}], 'ADF.USIM/EF.ARR': [...]}
 let _lastViewMode='decode';
 let hasIsim=false,hasUsim=false;
-const NO_ADM_FILES=['EF.FPLMN','EF.OPLMNwAcT'];
 const PLMN_FILES_WITH_ACT=['EF.PLMNwAcT','EF.OPLMNwAcT','EF.HPLMNwAcT'];
 const PLMN_FILES_NO_ACT=['EF.FPLMN','EF.EHPLMN'];
 function isPlmnFile(name){return PLMN_FILES_WITH_ACT.includes(name)||PLMN_FILES_NO_ACT.includes(name);}
@@ -428,8 +427,6 @@ function switchView(mode){
 function updateDetailButtons(f,r){
     var btnWrite=document.getElementById('btnWrite');
     var isError=!r||r.error;
-    var noAdm=NO_ADM_FILES.includes(f.name);
-    if(noAdm){btnWrite.disabled=false;btnWrite.removeAttribute('data-tip');return;}
     var writeCond=getArrCondition(f.path,'update_erase');
     var needsAdm=writeCond&&writeCond.type==='adm';
     var isNever=writeCond&&writeCond.type==='never';
@@ -841,8 +838,7 @@ async function doAdmVerify(btn,admType){
 function openWriteMode(){
     if(!selectedFile||!readCache[selectedFile.path])return;
     const r=readCache[selectedFile.path];if(r.error&&!r.success)return;
-    const noAdm=NO_ADM_FILES.includes(selectedFile.name);
-    if(!noAdm&&!_getVerifiedAdm()){
+    if(!_getVerifiedAdm()){
         var writeCond=getArrCondition(selectedFile.path,'update_erase');
         if(writeCond&&writeCond.type==='adm'&&!isAdmSatisfied(writeCond))return;
     }
