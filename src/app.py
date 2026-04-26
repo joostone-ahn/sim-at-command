@@ -23,6 +23,7 @@ isim_aid = ''
 usim_lchan = 0    # Logical channel for USIM (from STATUS scan)
 isim_lchan = -1   # Logical channel for ISIM (-1 = not available via scan)
 isim_ccho = False  # True if ISIM uses AT+CCHO/CGLA fallback
+adm_keys = {}     # Verified ADM keys: {'ADM1': 'hex', ...} — cleared on disconnect
 
 
 @app.route('/')
@@ -69,13 +70,14 @@ def connect():
 @app.route('/disconnect', methods=['POST'])
 def disconnect():
     """Disconnect from modem."""
-    global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho
+    global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho, adm_keys
     modem.disconnect()
     usim_aid = ''
     isim_aid = ''
     usim_lchan = 0
     isim_lchan = -1
     isim_ccho = False
+    adm_keys = {}
     return jsonify({'success': True})
 
 
@@ -385,6 +387,8 @@ def verify_adm():
     key_ref = key_ref_map.get(adm_type, '0A')
 
     r = modem.verify_adm(adm_hex, key_ref)
+    if r.get('success'):
+        adm_keys[adm_type] = {'hex': adm_hex, 'key_ref': key_ref}
     r['log'] = [{'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()}]
     return jsonify(r)
 

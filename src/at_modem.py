@@ -93,13 +93,29 @@ class ATModem:
         return resp
 
     def at_check(self) -> dict:
-        """Verify AT, scan channels, CCHO fallback with EF.DIR if needed."""
+        """Verify AT, CFUN power cycle, scan channels, CCHO fallback with EF.DIR if needed."""
         try:
             resp = self._send('AT')
             if 'OK' not in resp:
                 return {'success': False, 'error': 'No AT response'}
-            # 1. Scan channels to find USIM/ISIM
-            channels = self.scan_channels([])
+            # 0. CFUN power cycle to ensure clean UICC state
+            self._send('AT+CFUN=0', timeout=5)
+            self._send('AT+CFUN=1', timeout=5)
+            # Wait for UICC ready — poll until CSIM responds, capture ch0 data
+            import time
+            ch0_data = ''
+            for _ in range(10):
+                test = self._send('AT+CSIM=10,"80F2000000"')
+                if '+CSIM:' in test:
+                    import re as _re
+                    m = _re.search(r'\+CSIM:\s*\d+,\s*"([^"]*)"', test)
+                    if m:
+                        raw = m.group(1).upper()
+                        ch0_data = raw[:-4] if len(raw) > 4 else ''
+                    break
+                time.sleep(0.5)
+            # 1. Scan channels to find USIM/ISIM (ch0 already fetched)
+            channels = self.scan_channels([], ch0_data=ch0_data)
             # 2. If ISIM not found via scan, read EF.DIR and return AIDs for CCHO fallback
             dir_result = {'aids': [], 'meta': {}, 'records': []}
             if 'isim' not in channels:
@@ -133,22 +149,30 @@ class ATModem:
             result2['data'] = result.get('data', '') + result2.get('data', '')
             self._log_apdu('rx', result2.get('data', ''), result2.get('sw', ''))
             return result2
-        self._log_apdu('rx', result.get('data', ''), sw)
+        if not sw and result.get('error'):
+            self._log_apdu('rx', result.get('error', ''), '')
+        else:
+            self._log_apdu('rx', result.get('data', ''), sw)
         return result
 
-    def scan_channels(self, aids: list[str]) -> dict:
+    def scan_channels(self, aids: list[str], ch0_data: str = '') -> dict:
         """Scan logical channels 0~19 with STATUS command to find USIM/ISIM.
         Channels 0~3: basic (CLA = 0x00|ch), Channels 4~19: extended (CLA = 0x40|(ch-4))
+        ch0_data: pre-fetched ch0 STATUS response data (skip ch0 scan if provided)
         Returns {'usim': {'lchan': N, 'aid': '...'}, 'isim': {'lchan': N, 'aid': '...'}}"""
         result = {}
         usim_prefix = 'A0000000871002'
         isim_prefix = 'A0000000871004'
         fail_count = 0
         for ch in range(20):
-            cla = _cla_for_lchan(ch, proprietary=True)
-            r = self.csim_send(f'{cla:02X}F2000000')
-            sw = r.get('sw', '')
-            data = r.get('data', '')
+            if ch == 0 and ch0_data:
+                data = ch0_data
+                sw = '9000'
+            else:
+                cla = _cla_for_lchan(ch, proprietary=True)
+                r = self.csim_send(f'{cla:02X}F2000000')
+                sw = r.get('sw', '')
+                data = r.get('data', '')
             if not (sw.startswith('90') or sw.startswith('61')) or not data:
                 fail_count += 1
                 # 6E00 = class not supported → extended channels not available

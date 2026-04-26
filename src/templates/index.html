@@ -480,22 +480,20 @@ async function doConnect(){
     apduLogMsg('Connecting to '+port+'...');
     const r=await api('/connect',{port});
     if(!r.success){apduLogMsg('❌ '+r.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    apduLogMsg('Modem reset (AT+CFUN 0/1)');
     apduLogMsg('Scanning channels...');
     const at=await api('/at_check',{});
     if(!at.success){apduLogMsg('❌ '+at.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
     if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');btn.disabled=false;btn.textContent='🔌 Connect';return;}
     hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
     const isCcho=at.dir&&at.dir.aids&&at.dir.aids.length>0;
-    apduLogMsg('USIM: ch'+at.usim_lchan+' ✅');
+    var isimStr=isCcho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
+    apduLogMsg('Scanned: USIM ch'+at.usim_lchan+', ISIM '+isimStr);
     if(isCcho){
-        apduLogMsg('ISIM: not found via scan');
+        apduLogMsg('ISIM not found via scan');
         apduLogMsg('Reading EF.DIR...');
-        apduLogMsg('ISIM: AT+CCHO fallback...');
-        apduLogMsg('ISIM: session '+at.isim_lchan+(at.isim_lchan>=0?' ✅':' ❌'));
-    }else if(at.isim_lchan>=0){
-        apduLogMsg('ISIM: ch'+at.isim_lchan+' ✅');
-    }else{
-        apduLogMsg('ISIM: N/A');
+        apduLogMsg('Opening ISIM via AT+CCHO...');
+        if(at.isim_lchan<0){apduLogMsg('❌ ISIM CCHO failed');}
     }
     apduLogMsg('Reading EF.ARR...');
     await loadArrData();
@@ -517,7 +515,7 @@ async function doConnect(){
     if(info.msisdn||info._msisdn_all_hex){var mData=info._msisdn_all_hex||[info._msisdn_hex||''];var mNum=info._msisdn_numrecs||mData.length;readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:mData,decoded:info._msisdn_decoded||[],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:mNum};}
     // Cache EF.DIR if read during fallback
     if(at.dir&&at.dir.records&&at.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:at.dir.records,meta:at.dir.meta||{},record_len:(at.dir.meta||{}).record_len||0,num_records:at.dir.records.length};}
-    apduLogMsg('Connected ✅');
+    apduLogMsg('✅ Connected');
     document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('portSelect').disabled=true;
     document.getElementById('admArea').style.display='flex';
     await api('/apdu_log_clear',{});_apduLogIdx=0;
@@ -818,7 +816,7 @@ async function doAdmVerify(btn,admType){
     var r=await api('/verify_adm',{adm:a,adm_type:admType});
     await pollApduLog();
     if(r.success){
-        apduLogMsg(admType+' verified ✅');
+        apduLogMsg('✅ '+admType+' verified');
         admVerified[admType]=true;admKeys[admType]=a;
         btn.textContent='Verified';btn.style.background='linear-gradient(45deg,#27ae60,#2ecc71)';btn.style.color='white';input.readOnly=true;
         status.innerHTML='<span style="color:#27ae60">✅ '+admType+' verified successfully</span>';
@@ -827,7 +825,7 @@ async function doAdmVerify(btn,admType){
         // Refresh Write button for currently selected file
         if(selectedFile&&readCache[selectedFile.path]){updateDetailButtons(selectedFile,readCache[selectedFile.path]);}
     }else{
-        apduLogMsg(admType+' verify failed ❌');
+        apduLogMsg('❌ '+admType+' verify failed');
         status.innerHTML='<span style="color:#c0392b">❌ '+admType+': '+(r.error||'Verification failed')+'</span>';btn.disabled=false;
     }
 }
@@ -881,10 +879,10 @@ async function submitWrite(){
     document.getElementById('writeStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeSubmitBtn').disabled=true;
     const wr=await api('/write',{path:f.path,fid:f.fid,structure:r.structure,data:hex,record_nr:recNr,record_len:r.record_len||0});
     await pollApduLog();
-    if(wr.success){apduLogMsg('Write OK ✅');document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
-        delete readCache[f.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);apduLogMsg('Re-read OK ✅');}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
+    if(wr.success){apduLogMsg('✅ Write OK');document.getElementById('writeStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';writeOrigHex=hex.toUpperCase();document.getElementById('writeSubmitBtn').disabled=true;document.getElementById('writeRestoreBtn').disabled=true;
+        delete readCache[f.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});await pollApduLog();if(rr.success){readCache[f.path]=rr;showFileData(f,rr);apduLogMsg('✅ Re-read OK');}else{if(isLf&&Array.isArray(r.data))r.data[recNr-1]=hex;else r.data=hex;readCache[f.path]=r;showFileData(f,r);}
         if(isPlmnFile(f.name)&&document.getElementById('writePlmnSection').style.display!=='none'){writeOrigHex=(readCache[f.path].data||hex).toUpperCase();renderPlmnEditor();}
-    }else{await pollApduLog();apduLogMsg('Write failed ❌');document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
+    }else{await pollApduLog();apduLogMsg('❌ Write failed');document.getElementById('writeStatus').innerHTML='<span style="color:#e74c3c">'+(wr.error||'Write failed')+'</span>';document.getElementById('writeSubmitBtn').disabled=false;}
 }
 
 /* === Service Table Write === */
@@ -932,9 +930,9 @@ async function tlvWrite(){
     document.getElementById('writeTlvStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeTlvWriteBtn').disabled=true;
     const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
     await pollApduLog();
-    if(wr.success){apduLogMsg('SET DATA OK ✅');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
-        delete readCache[selectedFile.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('Re-read OK ✅');}
-    }else{await pollApduLog();apduLogMsg('SET DATA failed ❌');document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
+    if(wr.success){apduLogMsg('✅ SET DATA OK');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
+        delete readCache[selectedFile.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('✅ Re-read OK');}
+    }else{await pollApduLog();apduLogMsg('❌ SET DATA failed');document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">${wr.error||'Write failed'}</span>`;document.getElementById('writeTlvWriteBtn').disabled=false;}
 }
 
 /* === Panel Resizer === */
@@ -953,7 +951,9 @@ async function pollApduLog(){
             var block=document.createElement('div');
             block.style.cssText='margin:2px 0;white-space:pre';
             if(e.dir==='msg'){
-                block.style.cssText='color:#667eea;font-style:italic;padding:1px 0';
+                var isErr=e.data&&e.data.indexOf('❌')>=0;
+                var isOk=e.data&&e.data.indexOf('✅')>=0;
+                block.style.cssText=isErr?'color:#e74c3c;font-style:italic;padding:1px 0':isOk?'color:#27ae60;font-style:italic;padding:1px 0':'color:#333;font-style:italic;padding:1px 0';
                 block.textContent='── '+e.data;
             }else if(e.dir==='tx'){
                 block.innerHTML='<span style="color:#0066FF;font-weight:700">&gt;&gt; </span>'+_fmtApduTx(e.data);
@@ -971,7 +971,8 @@ function _fmtApduTx(hex){
     if(!hex||hex.length<8)return esc(hex);
     var cla=hex.substr(0,2),ins=hex.substr(2,2),p1=hex.substr(4,2),p2=hex.substr(6,2);
     var rest=hex.substr(8);
-    var header='<span style="color:#667eea;font-weight:600">'+cla+'</span> <span style="color:#764ba2;font-weight:600">'+ins+'</span> '+p1+' '+p2;
+    var isGetResp=(ins==='C0');
+    var header=isGetResp?'<span style="color:#999">'+cla+' '+ins+' '+p1+' '+p2+'</span>':'<span style="color:#667eea;font-weight:600">'+cla+'</span> <span style="color:#764ba2;font-weight:600">'+ins+'</span> <span style="color:#999">'+p1+' '+p2+'</span>';
     if(!rest)return header;
     return header+' '+_fmtHexBlock(rest,3);
 }
@@ -984,10 +985,11 @@ function _fmtHexBlock(hex,indent){
         lines.push(bytes.slice(i,i+16).join(' '));
     }
     var pad='\n'+' '.repeat(indent);
-    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+    return '<span style="color:#999">'+lines.join(pad)+'</span>';
 }
 function _fmtHexBlockRx(hex,indent,sw){
     // Format hex with SW highlighted at the end
+    if(!hex&&!sw)return'<span style="color:#e74c3c;font-weight:700">ERROR</span>';
     if(!hex)return'';
     var swLen=sw?sw.length:0;
     var dataHex=swLen?hex.slice(0,-swLen):hex;
@@ -1010,11 +1012,11 @@ function _fmtHexBlockRx(hex,indent,sw){
         lines.push(parts.join(' '));
     }
     var pad='\n'+' '.repeat(indent);
-    return '<span style="color:#555">'+lines.join(pad)+'</span>';
+    return '<span style="color:#999">'+lines.join(pad)+'</span>';
 }
 async function clearApduLog(){document.getElementById('apduLog').innerHTML='';await api('/apdu_log_clear',{});_apduLogIdx=0;}
 function copyApduLog(btn){var el=document.getElementById('apduLog');navigator.clipboard.writeText(el.innerText||el.textContent||'');if(btn){btn.textContent='Copied';setTimeout(function(){btn.textContent='📋 Copy';},1500);}}
-function apduLogMsg(msg){var el=document.getElementById('apduLog');var d=document.createElement('div');d.style.cssText='color:#667eea;font-style:italic;padding:1px 0';d.textContent='── '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function apduLogMsg(msg){var el=document.getElementById('apduLog');var d=document.createElement('div');var isErr=msg&&msg.indexOf('❌')>=0;var isOk=msg&&msg.indexOf('✅')>=0;d.style.cssText=isErr?'color:#e74c3c;font-style:italic;padding:1px 0':isOk?'color:#27ae60;font-style:italic;padding:1px 0':'color:#333;font-style:italic;padding:1px 0';d.textContent='── '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
 function autoResize(el){el.style.height='auto';el.style.height=Math.max(60,el.scrollHeight)+'px';}
 
 /* === Init === */

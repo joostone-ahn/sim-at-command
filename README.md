@@ -8,10 +8,10 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 | Platform | Chipset | AT+CSIM | Logical<br>channel<br>scan (NOTE1) | AID SELECT | AT+CCHO<br>/CGLA | ISIM<br>access | RETRIEVE<br>DATA |
 |---|---|---|---|---|---|---|---|
-| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
+| Android | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ⚠️ (NOTE5) |
 | Android | **Samsung LSI** | ✅ | ✅<br>(NOTE2) | ✅ | ✅ | Scanned<br>channel (NOTE3) | ✅ |
 | Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO<br>/CGLA (NOTE4) | ✅ |
-| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ❌ (NOTE5) |
+| iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ⚠️ (NOTE5) |
 
 > **NOTE1:** The tool sends STATUS (INS=F2) with proprietary CLA on each logical channel (0–19) via AT+CSIM and extracts the AID (tag 84) from the FCP response. If the AID starts with the USIM AID prefix (A0000000871002) or ISIM AID prefix (A0000000871004), that channel number is recorded and used for all subsequent file access on that application.
 
@@ -21,7 +21,7 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 > **NOTE4:** When logical channel scan is not supported, the tool falls back to AT+CCHO (3GPP TS 27.007 Section 8.45) to open a session by ISIM AID, then sends APDUs via AT+CGLA (Section 8.46) on that session. The modem manages channel assignment internally.
 
-> **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which does not support RETRIEVE DATA (INS=CB). BER-TLV EFs (e.g. EF.URSP) cannot be read via AT command on Qualcomm chipsets. Use a Samsung LSI or MediaTek device, or a PC/SC card reader ([sim-reader](https://github.com/joostone-ahn/sim-reader)) instead.
+> **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which may block RETRIEVE DATA (INS=CB) with SW=6981 (command incompatible with file structure). The tool performs an AT+CFUN power cycle on every connect to reset the modem internal state, which has been verified to resolve the issue.
 
 ---
 
@@ -69,9 +69,11 @@ Select the serial port and click **Connect**. Only modem ports are shown.
 > If ADB is available, the connected device model name is shown next to the port name.
 
 On connect, the tool automatically:
-- Reads **ICCID, IMSI, MSISDN** and displays them in the header bar
-- Scans logical channels to identify which channel is assigned to USIM and ISIM (see Modem Compatibility)
+- Performs **AT+CFUN power cycle** to reset modem internal state
+- Scans logical channels to identify which channel is assigned to USIM and ISIM
+- If ISIM is not found via channel scan (e.g. MediaTek), opens ISIM via AT+CCHO/CGLA
 - Reads **EF.ARR** (MF, USIM, ISIM) to display access rules for each EF — shows which ADM key must be verified before writing
+- Reads **ICCID, IMSI, MSISDN** and displays them in the header bar
 
 ### 2. Browse & Read
 The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF).
@@ -102,7 +104,11 @@ The **APDU Log** panel shows all APDU communication in real-time:
 | Other EFs | JSON (pySim-based decoding) |
 
 ### 5. Verify ADM
-Click **VERIFY ADM** to verify ADM1–ADM4 independently. Status dots show verification state (gray/green). The **Write** button is automatically enabled/disabled based on ARR conditions, with a tooltip showing which ADM key is needed. If no update rule exists in ARR, write is treated as NEVER.
+Click **VERIFY ADM** to verify ADM1–ADM4 independently.
+
+- Status dots show verification state (gray = not verified, green = verified)
+- **Write** button is automatically enabled/disabled based on ARR conditions
+- Tooltip shows which ADM key is needed for update
 
 ### 6. Write
 Click **Write** to open the editor popup:
