@@ -480,21 +480,30 @@ async function doConnect(){
     apduLogMsg('Connecting to '+port+'...');
     const r=await api('/connect',{port});
     if(!r.success){apduLogMsg('❌ '+r.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
-    apduLogMsg('Modem reset (AT+CFUN 0/1)');
     apduLogMsg('Scanning channels...');
-    const at=await api('/at_check',{});
+    var at=await api('/at_check',{});
     if(!at.success){apduLogMsg('❌ '+at.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
     if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');btn.disabled=false;btn.textContent='🔌 Connect';return;}
     hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
     const isCcho=at.dir&&at.dir.aids&&at.dir.aids.length>0;
-    var isimStr=isCcho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
-    apduLogMsg('Scanned: USIM ch'+at.usim_lchan+', ISIM '+isimStr);
+    // CFUN reset for Qualcomm/LSI (ISIM found via scan)
+    if(!isCcho&&at.isim_lchan>=0){
+        apduLogMsg('Modem reset (AT+CFUN 0/1)...');
+        var cfun=await api('/cfun_reset',{});
+        if(cfun.success){
+            at.usim_lchan=cfun.usim_lchan;at.isim_lchan=cfun.isim_lchan;
+            at.usim_aid=cfun.usim_aid||at.usim_aid;at.isim_aid=cfun.isim_aid||at.isim_aid;
+            hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
+        }
+    }
     if(isCcho){
         apduLogMsg('ISIM not found via scan');
         apduLogMsg('Reading EF.DIR...');
         apduLogMsg('Opening ISIM via AT+CCHO...');
         if(at.isim_lchan<0){apduLogMsg('❌ ISIM CCHO failed');}
     }
+    var isimStr=isCcho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
+    apduLogMsg('Scanned: USIM ch'+at.usim_lchan+', ISIM '+isimStr);
     apduLogMsg('Reading EF.ARR...');
     await loadArrData();
     apduLogMsg('Reading ICCID/IMSI/MSISDN...');

@@ -125,6 +125,31 @@ def at_check():
     return jsonify(result)
 
 
+@app.route('/cfun_reset', methods=['POST'])
+def cfun_reset():
+    """AT+CFUN power cycle and re-scan channels."""
+    global usim_aid, isim_aid, usim_lchan, isim_lchan
+    if not modem.is_connected:
+        return jsonify({'success': False, 'error': 'Modem not connected'})
+    result = modem.cfun_reset()
+    if not result.get('success'):
+        return jsonify(result)
+    channels = result.get('channels', {})
+    if 'usim' in channels:
+        usim_lchan = channels['usim']['lchan']
+        if channels['usim']['aid']:
+            usim_aid = channels['usim']['aid']
+    if 'isim' in channels:
+        isim_lchan = channels['isim']['lchan']
+        if channels['isim']['aid']:
+            isim_aid = channels['isim']['aid']
+    result['usim_aid'] = usim_aid
+    result['isim_aid'] = isim_aid
+    result['usim_lchan'] = usim_lchan
+    result['isim_lchan'] = isim_lchan
+    return jsonify(result)
+
+
 @app.route('/read_info', methods=['POST'])
 def read_info():
     """Read ICCID, IMSI and MSISDN for header display."""

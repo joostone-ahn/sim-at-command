@@ -93,35 +93,41 @@ class ATModem:
         return resp
 
     def at_check(self) -> dict:
-        """Verify AT, CFUN power cycle, scan channels, CCHO fallback with EF.DIR if needed."""
+        """Verify AT, scan channels, CCHO fallback."""
         try:
             resp = self._send('AT')
             if 'OK' not in resp:
                 return {'success': False, 'error': 'No AT response'}
-            # 0. CFUN power cycle to ensure clean UICC state
-            self._send('AT+CFUN=0', timeout=5)
-            self._send('AT+CFUN=1', timeout=5)
-            # Wait for UICC ready — poll until CSIM responds, capture ch0 data
-            import time
-            ch0_data = ''
-            for _ in range(10):
-                test = self._send('AT+CSIM=10,"80F2000000"')
-                if '+CSIM:' in test:
-                    import re as _re
-                    m = _re.search(r'\+CSIM:\s*\d+,\s*"([^"]*)"', test)
-                    if m:
-                        raw = m.group(1).upper()
-                        ch0_data = raw[:-4] if len(raw) > 4 else ''
-                    break
-                time.sleep(0.5)
-            # 1. Scan channels to find USIM/ISIM (ch0 already fetched)
-            channels = self.scan_channels([], ch0_data=ch0_data)
-            # 2. If ISIM not found via scan, read EF.DIR and return AIDs for CCHO fallback
+            # 1. Scan channels to find USIM/ISIM
+            logger.info("[INIT] Scanning channels...")
+            channels = self.scan_channels([])
+            # 2. If ISIM not found via scan (MediaTek pattern), read EF.DIR for CCHO fallback
             dir_result = {'aids': [], 'meta': {}, 'records': []}
             if 'isim' not in channels:
+                logger.info("[INIT] ISIM not found via scan, reading EF.DIR...")
                 dir_result = self.read_ef_dir()
             return {'success': True, 'csim': True, 'aids': dir_result['aids'],
                     'channels': channels, 'dir': dir_result}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def cfun_reset(self) -> dict:
+        """AT+CFUN power cycle to reset modem MMGSDI state, then re-scan."""
+        try:
+            import time
+            logger.info("[INIT] Modem reset (AT+CFUN 0/1)")
+            self._send('AT+CFUN=0', timeout=5)
+            self._send('AT+CFUN=1', timeout=5)
+            # Wait for UICC ready
+            for _ in range(10):
+                test = self._send('AT+CSIM=10,"80F2000000"')
+                if '+CSIM:' in test:
+                    break
+                time.sleep(0.5)
+            # Re-scan
+            logger.info("[INIT] Re-scanning channels...")
+            channels = self.scan_channels([])
+            return {'success': True, 'channels': channels}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
@@ -155,7 +161,7 @@ class ATModem:
             self._log_apdu('rx', result.get('data', ''), sw)
         return result
 
-    def scan_channels(self, aids: list[str], ch0_data: str = '') -> dict:
+    def scan_channels(self, aids: list[str]) -> dict:
         """Scan logical channels 0~19 with STATUS command to find USIM/ISIM.
         Channels 0~3: basic (CLA = 0x00|ch), Channels 4~19: extended (CLA = 0x40|(ch-4))
         ch0_data: pre-fetched ch0 STATUS response data (skip ch0 scan if provided)
@@ -165,14 +171,10 @@ class ATModem:
         isim_prefix = 'A0000000871004'
         fail_count = 0
         for ch in range(20):
-            if ch == 0 and ch0_data:
-                data = ch0_data
-                sw = '9000'
-            else:
-                cla = _cla_for_lchan(ch, proprietary=True)
-                r = self.csim_send(f'{cla:02X}F2000000')
-                sw = r.get('sw', '')
-                data = r.get('data', '')
+            cla = _cla_for_lchan(ch, proprietary=True)
+            r = self.csim_send(f'{cla:02X}F2000000')
+            sw = r.get('sw', '')
+            data = r.get('data', '')
             if not (sw.startswith('90') or sw.startswith('61')) or not data:
                 fail_count += 1
                 # 6E00 = class not supported → extended channels not available
@@ -297,13 +299,8 @@ class ATModem:
         """Read EF.DIR (2F00) via AT+CSIM and extract AIDs from all records.
         Returns {'aids': [...], 'meta': {...}, 'records': [...]} for cache."""
         result = {'aids': [], 'meta': {}, 'records': []}
-        # SELECT MF
-        r = self.csim_send('00A40004023F00')
-        sw = r.get('sw', '')
-        if not (sw.startswith('90') or sw.startswith('61')):
-            return result
-        # SELECT EF.DIR (2F00)
-        r = self.csim_send('00A40004022F00')
+        # SELECT EF.DIR by path
+        r = self.csim_send('00A40804022F00')
         sw = r.get('sw', '')
         if not (sw.startswith('90') or sw.startswith('61')):
             return result

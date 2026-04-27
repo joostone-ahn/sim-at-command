@@ -21,7 +21,7 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 > **NOTE4:** When logical channel scan is not supported, the tool falls back to AT+CCHO (3GPP TS 27.007 Section 8.45) to open a session by ISIM AID, then sends APDUs via AT+CGLA (Section 8.46) on that session. The modem manages channel assignment internally.
 
-> **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which may block RETRIEVE DATA (INS=CB) with SW=6981 (command incompatible with file structure). The tool performs an AT+CFUN power cycle on every connect to reset the modem internal state, which has been verified to resolve the issue.
+> **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which may block RETRIEVE DATA (INS=CB) with SW=6981 (command incompatible with file structure). The tool performs an AT+CFUN power cycle to reset the modem internal state before proceeding, which has been verified to resolve the issue.
 
 ---
 
@@ -69,11 +69,11 @@ Select the serial port and click **Connect**. Only modem ports are shown.
 > If ADB is available, the connected device model name is shown next to the port name.
 
 On connect, the tool automatically:
-- Performs **AT+CFUN power cycle** to reset modem internal state
 - Scans logical channels to identify which channel is assigned to USIM and ISIM
-- If ISIM is not found via channel scan (e.g. MediaTek), opens ISIM via AT+CCHO/CGLA
 - Reads **EF.ARR** (MF, USIM, ISIM) to display access rules for each EF — shows which ADM key must be verified before writing
 - Reads **ICCID, IMSI, MSISDN** and displays them in the header bar
+
+> If ISIM is not found via channel scan, the tool reads EF.DIR to discover the ISIM AID and opens it via AT+CCHO/CGLA (see NOTE4). If ISIM is found via scan, the tool performs an AT+CFUN power cycle to reset the modem internal state for RETRIEVE DATA support (see NOTE5).
 
 ### 2. Browse & Read
 The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF).
