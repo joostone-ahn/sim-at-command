@@ -83,23 +83,21 @@ def disconnect():
 
 @app.route('/at_check', methods=['POST'])
 def at_check():
-    """Verify AT functionality, discover AIDs, and scan logical channels."""
+    """Verify AT, scan channels, discover AIDs, CCHO fallback if needed."""
     global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho
     if not modem.is_connected:
         return jsonify({'success': False, 'error': 'Modem not connected'})
-    result = modem.at_check()
+    # 1. Verify AT
+    if not modem.verify_at():
+        return jsonify({'success': False, 'error': 'No AT response'})
+    # 2. Scan channels
+    channels = modem.scan_channels()
+    # 3. Process scan results
     usim_aid = ''
     isim_aid = ''
     usim_lchan = 0
     isim_lchan = -1
     isim_ccho = False
-    for aid in result.get('aids', []):
-        aid_upper = aid.upper()
-        if aid_upper.startswith('A0000000871002'):
-            usim_aid = aid_upper
-        elif aid_upper.startswith('A0000000871004'):
-            isim_aid = aid_upper
-    channels = result.get('channels', {})
     if 'usim' in channels:
         usim_lchan = channels['usim']['lchan']
         if channels['usim']['aid']:
@@ -107,22 +105,34 @@ def at_check():
     if 'isim' in channels:
         isim_lchan = channels['isim']['lchan']
         isim_aid = channels['isim']['aid']
-    # If ISIM not found via scan but AID exists in EF.DIR, try AT+CCHO fallback
-    if isim_lchan < 0 and isim_aid:
-        session = modem.ccho_open(isim_aid)
-        if session is not None:
-            isim_ccho = True
-            isim_lchan = session  # Store session ID (used differently from lchan)
-            logger.info("[AID] ISIM via AT+CCHO session %d", session)
-            modem.ccho_close(session)  # Close for now, will reopen per-read
+    # 4. If ISIM not found via scan, read EF.DIR and try CCHO fallback
+    dir_result = {'aids': [], 'meta': {}, 'records': []}
+    if 'isim' not in channels:
+        dir_result = modem.read_ef_dir()
+        for aid in dir_result.get('aids', []):
+            aid_upper = aid.upper()
+            if aid_upper.startswith('A0000000871002') and not usim_aid:
+                usim_aid = aid_upper
+            elif aid_upper.startswith('A0000000871004'):
+                isim_aid = aid_upper
+        # Try CCHO fallback for ISIM
+        if isim_aid:
+            session = modem.ccho_open(isim_aid)
+            if session is not None:
+                isim_ccho = True
+                isim_lchan = session
+                logger.info("[AID] ISIM via AT+CCHO session %d", session)
+                modem.ccho_close(session)
     logger.info("[AID] USIM=%s (ch%d), ISIM=%s (ch%d)",
                 usim_aid or '(none)', usim_lchan,
                 isim_aid or '(none)', isim_lchan)
-    result['usim_aid'] = usim_aid
-    result['isim_aid'] = isim_aid
-    result['usim_lchan'] = usim_lchan
-    result['isim_lchan'] = isim_lchan
-    return jsonify(result)
+    return jsonify({
+        'success': True, 'csim': True,
+        'channels': channels, 'dir': dir_result,
+        'aids': dir_result.get('aids', []),
+        'usim_aid': usim_aid, 'isim_aid': isim_aid,
+        'usim_lchan': usim_lchan, 'isim_lchan': isim_lchan,
+    })
 
 
 @app.route('/cfun_reset', methods=['POST'])
@@ -131,10 +141,8 @@ def cfun_reset():
     global usim_aid, isim_aid, usim_lchan, isim_lchan
     if not modem.is_connected:
         return jsonify({'success': False, 'error': 'Modem not connected'})
-    result = modem.cfun_reset()
-    if not result.get('success'):
-        return jsonify(result)
-    channels = result.get('channels', {})
+    modem.cfun_reset()
+    channels = modem.scan_channels()
     if 'usim' in channels:
         usim_lchan = channels['usim']['lchan']
         if channels['usim']['aid']:
@@ -143,11 +151,11 @@ def cfun_reset():
         isim_lchan = channels['isim']['lchan']
         if channels['isim']['aid']:
             isim_aid = channels['isim']['aid']
-    result['usim_aid'] = usim_aid
-    result['isim_aid'] = isim_aid
-    result['usim_lchan'] = usim_lchan
-    result['isim_lchan'] = isim_lchan
-    return jsonify(result)
+    return jsonify({
+        'success': True, 'channels': channels,
+        'usim_aid': usim_aid, 'isim_aid': isim_aid,
+        'usim_lchan': usim_lchan, 'isim_lchan': isim_lchan,
+    })
 
 
 @app.route('/read_info', methods=['POST'])

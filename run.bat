@@ -31,15 +31,24 @@ if errorlevel 1 (
 
 REM Create venv if needed
 if not exist "%PYTHON%" (
+    if exist "%VENV%" (
+        echo [SETUP] Removing broken virtual environment...
+        rmdir /s /q "%VENV%" >nul 2>&1
+    )
     echo [SETUP] Creating virtual environment...
     python -m venv "%VENV%"
+    if not exist "%PYTHON%" (
+        echo [ERROR] Failed to create virtual environment
+        pause
+        exit /b 1
+    )
 )
 
 REM Install dependencies
 "%PYTHON%" -c "import flask, serial, pySim" >nul 2>&1
 if errorlevel 1 (
     echo [SETUP] Installing dependencies...
-    "%PIP%" install -q --disable-pip-version-check -r "%DIR%requirements.txt"
+    "%PYTHON%" -m pip install -q --disable-pip-version-check -r "%DIR%requirements.txt"
     echo [SETUP] Done.
 )
 

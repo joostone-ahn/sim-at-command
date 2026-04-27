@@ -92,44 +92,22 @@ class ATModem:
                 logger.info("[AT] <- %s", line)
         return resp
 
-    def at_check(self) -> dict:
-        """Verify AT, scan channels, CCHO fallback."""
-        try:
-            resp = self._send('AT')
-            if 'OK' not in resp:
-                return {'success': False, 'error': 'No AT response'}
-            # 1. Scan channels to find USIM/ISIM
-            logger.info("[INIT] Scanning channels...")
-            channels = self.scan_channels([])
-            # 2. If ISIM not found via scan (MediaTek pattern), read EF.DIR for CCHO fallback
-            dir_result = {'aids': [], 'meta': {}, 'records': []}
-            if 'isim' not in channels:
-                logger.info("[INIT] ISIM not found via scan, reading EF.DIR...")
-                dir_result = self.read_ef_dir()
-            return {'success': True, 'csim': True, 'aids': dir_result['aids'],
-                    'channels': channels, 'dir': dir_result}
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+    def verify_at(self) -> bool:
+        """Verify basic AT response."""
+        resp = self._send('AT')
+        return 'OK' in resp
 
-    def cfun_reset(self) -> dict:
-        """AT+CFUN power cycle to reset modem MMGSDI state, then re-scan."""
-        try:
-            import time
-            logger.info("[INIT] Modem reset (AT+CFUN 0/1)")
-            self._send('AT+CFUN=0', timeout=5)
-            self._send('AT+CFUN=1', timeout=5)
-            # Wait for UICC ready
-            for _ in range(10):
-                test = self._send('AT+CSIM=10,"80F2000000"')
-                if '+CSIM:' in test:
-                    break
-                time.sleep(0.5)
-            # Re-scan
-            logger.info("[INIT] Re-scanning channels...")
-            channels = self.scan_channels([])
-            return {'success': True, 'channels': channels}
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+    def cfun_reset(self):
+        """AT+CFUN power cycle to reset modem MMGSDI state. Polls until UICC is ready."""
+        import time
+        logger.info("[INIT] Modem reset (AT+CFUN 0/1)")
+        self._send('AT+CFUN=0', timeout=5)
+        self._send('AT+CFUN=1', timeout=5)
+        for _ in range(10):
+            test = self._send('AT+CSIM=10,"80F2000000"')
+            if '+CSIM:' in test:
+                break
+            time.sleep(0.5)
 
     def csim_send(self, apdu_hex: str) -> dict:
         """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE)."""
@@ -161,10 +139,9 @@ class ATModem:
             self._log_apdu('rx', result.get('data', ''), sw)
         return result
 
-    def scan_channels(self, aids: list[str]) -> dict:
+    def scan_channels(self) -> dict:
         """Scan logical channels 0~19 with STATUS command to find USIM/ISIM.
         Channels 0~3: basic (CLA = 0x00|ch), Channels 4~19: extended (CLA = 0x40|(ch-4))
-        ch0_data: pre-fetched ch0 STATUS response data (skip ch0 scan if provided)
         Returns {'usim': {'lchan': N, 'aid': '...'}, 'isim': {'lchan': N, 'aid': '...'}}"""
         result = {}
         usim_prefix = 'A0000000871002'
