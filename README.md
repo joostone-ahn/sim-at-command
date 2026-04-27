@@ -12,6 +12,7 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 | Android | **Samsung LSI** | ✅ | ✅<br>(NOTE2) | ✅ | ✅ | Scanned<br>channel (NOTE3) | ✅ |
 | Android | **MediaTek** | ✅ | ❌ | ❌ | ✅ | AT+CCHO<br>/CGLA (NOTE4) | ✅ |
 | iOS | **Qualcomm** | ✅ | ✅ | ✅ | ✅ | Scanned<br>channel (NOTE3) | ⚠️ (NOTE5) |
+| iOS | **Apple Modem** | ⚠️ (NOTE6) | ✅ | - | - | Scanned<br>channel (NOTE3) | ✅ |
 
 > **NOTE1:** The tool sends STATUS (INS=F2) with proprietary CLA on each logical channel (0–19) via AT+CSIM and extracts the AID (tag 84) from the FCP response. If the AID starts with the USIM AID prefix (A0000000871002) or ISIM AID prefix (A0000000871004), that channel number is recorded and used for all subsequent file access on that application.
 
@@ -22,6 +23,8 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 > **NOTE4:** When logical channel scan is not supported, the tool falls back to AT+CCHO (3GPP TS 27.007 Section 8.45) to open a session by ISIM AID, then sends APDUs via AT+CGLA (Section 8.46) on that session. The modem manages channel assignment internally.
 
 > **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which may block RETRIEVE DATA (INS=CB) with SW=6981 (command incompatible with file structure). The tool performs an AT+CFUN power cycle to reset the modem internal state before proceeding, which has been verified to resolve the issue.
+
+> **NOTE6:** AT+CSIM may occasionally return ERROR. The tool automatically recovers via AT+CFUN power cycle and re-runs the initialization procedure (channel scan, EF.ARR, ICCID/IMSI/MSISDN).
 
 ---
 
@@ -34,13 +37,16 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 3. **Developer options**:
    - Enable **USB debugging** → connect USB → allow RSA key
    - Enable **3GPP AT commands** (required for AT+CSIM)
-4. **USB mode**: Dial `*#0808#` → select **DM + MODEM + ADB**
+4. **USB setting**: Select **DM + MODEM + ADB** mode
+   - Setup method varies by device model and carrier
 
 ### iOS (iPhone)
 
-- Carrier Settings → Baseband Manager → Logging Settings → Mode: **Passive, External Hardware (QXDM)**
+Carrier software version upgrade required. Then configure:
 
-> iPhone must be upgraded to a carrier software version to enable modem port access. Also, AT+CSIM is available on Windows only — Qualcomm USB driver is not available for macOS.
+- Carrier Settings → Baseband Manager → Logging Settings
+  - **Qualcomm**: Mode: **Passive, External Hardware (QXDM)** — Windows only
+  - **Apple Modem**: Mode: **Passive, External Hardware (AT Only)** — macOS only
 
 ---
 

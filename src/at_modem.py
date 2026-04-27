@@ -22,6 +22,8 @@ class ATModem:
         self.last_resp = ''
         self.apdu_log: list[dict] = []  # [{dir:'tx'/'rx', data:'hex', sw:'', ts:float}]
         self.apdu_log_max = 500
+        self.is_apple = False  # Apple modem: auto CFUN reset on CSIM ERROR
+        self._cfun_retrying = False  # Guard against recursive CFUN retry
 
     def connect(self, port: str = None) -> dict:
         """Connect to serial port and verify AT response."""
@@ -98,25 +100,58 @@ class ATModem:
         return 'OK' in resp
 
     def cfun_reset(self):
-        """AT+CFUN power cycle to reset modem MMGSDI state. Polls until UICC is ready."""
-        import time
+        """AT+CFUN power cycle to reset modem MMGSDI state. Polls AT until modem is ready."""
         logger.info("[INIT] Modem reset (AT+CFUN 0/1)")
         self._send('AT+CFUN=0', timeout=5)
         self._send('AT+CFUN=1', timeout=5)
-        for _ in range(10):
-            test = self._send('AT+CSIM=10,"80F2000000"')
-            if '+CSIM:' in test:
+        # Wait for modem ready
+        for _ in range(30):
+            test = self._send('AT')
+            if 'OK' in test:
                 break
             time.sleep(0.5)
 
+    def cfun_reset_apple(self):
+        """AT+CFUN power cycle for Apple modem.
+        CFUN=1 may return ERROR — polls AT until 'System is ready for GTI commands' appears (max 30s)."""
+        logger.info("[INIT] Apple modem reset (AT+CFUN 0/1)")
+        self._send('AT+CFUN=0', timeout=5)
+        resp = self._send('AT+CFUN=1', timeout=5)
+        if 'ERROR' in resp:
+            logger.info("[INIT] CFUN=1 returned ERROR — waiting for GTI ready")
+        # Poll AT every 0.5s, break when modem sends "System is ready for GTI commands"
+        for i in range(60):
+            time.sleep(0.5)
+            resp = self._send('AT')
+            if 'GTI' in resp:
+                logger.info("[INIT] Apple modem ready (GTI) after %d polls", i + 1)
+                return
+        logger.warning("[INIT] Apple modem GTI ready not received (timeout 30s)")
+
     def csim_send(self, apdu_hex: str) -> dict:
-        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE)."""
+        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE).
+        For Apple modem: auto CFUN reset on ERROR, returns with cfun_reset=True flag."""
         length = len(apdu_hex)
         cmd = f'AT+CSIM={length},"{apdu_hex}"'
         self._log_apdu('tx', apdu_hex)
         resp = self._send(cmd)
         result = self._parse_csim(resp)
         sw = result.get('sw', '')
+
+        # Apple modem: CFUN reset on CSIM ERROR, return error to caller
+        if not sw and result.get('error') and self.is_apple and not self._cfun_retrying:
+            logger.warning("[CSIM] ERROR on Apple modem — performing CFUN reset")
+            self._log_apdu('msg', '⚠️ CSIM ERROR — CFUN reset & retry')
+            self._cfun_retrying = True
+            try:
+                self.cfun_reset_apple()
+            finally:
+                self._cfun_retrying = False
+            self._log_apdu('msg', '✅ Modem recovered')
+            result['apple_reset'] = True
+            result['error'] = 'APPLE_RESET'
+            return result
+
         # Auto GET RESPONSE for SW 61xx
         if sw.startswith('61'):
             self._log_apdu('rx', result.get('data', ''), sw)
@@ -142,8 +177,8 @@ class ATModem:
     def scan_channels(self) -> dict:
         """Scan logical channels 0~19 with STATUS command to find USIM/ISIM.
         Channels 0~3: basic (CLA = 0x00|ch), Channels 4~19: extended (CLA = 0x40|(ch-4))
-        Returns {'usim': {'lchan': N, 'aid': '...'}, 'isim': {'lchan': N, 'aid': '...'}}"""
-        result = {}
+        Returns {'usim': {'lchan': N, 'aid': '...'}, 'isim': {'lchan': N, 'aid': '...'}, 'csim_ok': bool}"""
+        result = {'csim_ok': False}
         usim_prefix = 'A0000000871002'
         isim_prefix = 'A0000000871004'
         fail_count = 0
@@ -159,6 +194,7 @@ class ATModem:
                     break
                 continue
             fail_count = 0
+            result['csim_ok'] = True
             aid = _extract_aid_from_fcp(data)
             if aid:
                 aid_upper = aid.upper()

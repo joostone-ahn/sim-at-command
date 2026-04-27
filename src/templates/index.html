@@ -85,6 +85,7 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 <div class="container">
     <div class="header">
         <h1>📡 SIM AT Command Tool</h1>
+        <button onclick="document.getElementById('setupGuideOverlay').classList.add('show')" style="margin-left:auto;padding:5px 14px;font-size:0.72rem;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:6px;cursor:pointer;color:white;white-space:nowrap;font-weight:600">📋 Device Setup</button>
     </div>
     <div class="header" style="padding:8px 20px;margin-bottom:5px;gap:10px">
         <div style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
@@ -210,6 +211,44 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             </div>
         </div>
         <div id="admStatus" style="display:none;font-size:0.72rem;padding:2px 10px"></div>
+    </div>
+</div>
+</div>
+
+<!-- Device Setup Guide Popup -->
+<div id="setupGuideOverlay" class="overlay" onclick="if(event.target===this)this.classList.remove('show')">
+<div class="popup" style="width:560px;max-height:70vh;display:flex;flex-direction:column">
+    <div class="panel-title" style="border-radius:12px 12px 0 0">
+        <span>📋 Device Setup Guide</span>
+        <button class="btn btn-dark" onclick="document.getElementById('setupGuideOverlay').classList.remove('show')" style="margin-left:auto;padding:2px 10px;font-size:0.72rem">✕</button>
+    </div>
+    <div style="padding:20px;overflow-y:auto;font-size:0.78rem;line-height:1.8;color:#333">
+        <div style="font-weight:700;font-size:0.85rem;color:#667eea;margin-bottom:10px">Android (Samsung)</div>
+        <ol style="padding-left:20px;margin-bottom:16px">
+            <li><b>USB Driver</b> (Windows only): Install <a href="https://developer.samsung.com/android-usb-driver" target="_blank" style="color:#667eea">Samsung Android USB Driver</a></li>
+            <li><b>Developer mode</b>: Settings → About phone → Software information → tap <b>Build number</b> 5 times</li>
+            <li><b>Developer options</b>:
+                <ul style="padding-left:16px;margin:4px 0">
+                    <li>Enable <b>USB debugging</b> → connect USB → allow RSA key</li>
+                    <li>Enable <b>3GPP AT commands</b> (required for AT+CSIM)</li>
+                </ul>
+            </li>
+            <li><b>USB setting</b>: Select <b>DM + MODEM + ADB</b> mode
+                <ul style="padding-left:16px;margin:4px 0">
+                    <li style="color:#666;font-size:0.72rem">Setup method varies by device model and carrier</li>
+                </ul>
+            </li>
+        </ol>
+        <div style="font-weight:700;font-size:0.85rem;color:#667eea;margin-bottom:10px">iOS (iPhone)</div>
+        <div style="margin-bottom:8px">Carrier software version upgrade required. Then configure:</div>
+        <ul style="padding-left:20px">
+            <li>Carrier Settings → Baseband Manager → Logging Settings
+                <ul style="padding-left:16px;margin:4px 0">
+                    <li><b>Qualcomm</b>: Mode: <b>Passive, External Hardware (QXDM)</b> — Windows only</li>
+                    <li><b>Apple Modem</b>: Mode: <b>Passive, External Hardware (AT Only)</b> — macOS only</li>
+                </ul>
+            </li>
+        </ul>
     </div>
 </div>
 </div>
@@ -456,6 +495,7 @@ function resetDetailButtons(){
 async function refreshPorts(){
     const r=await api('/ports');const sel=document.getElementById('portSelect');
     sel.innerHTML='<option value="">Select a port...</option>';
+    window._portList=r.ports||[];
     if(r.ports&&r.ports.length){
         // Sort: modem ports first
         r.ports.sort((a,b)=>{const aM=(a.device+' '+a.description).toLowerCase().includes('modem')?0:1;const bM=(b.device+' '+b.description).toLowerCase().includes('modem')?0:1;return aM-bM;});
@@ -478,16 +518,35 @@ async function doConnect(){
     var btn=document.getElementById('btnConnect');
     btn.disabled=true;btn.textContent='Connecting...';
     apduLogMsg('Connecting to '+port+'...');
-    const r=await api('/connect',{port});
+    var selPort=(window._portList||[]).find(function(p){return p.device===port;});
+    var isIphone=selPort&&selPort.description&&selPort.description.toLowerCase().indexOf('iphone')>=0;
+    const r=await api('/connect',{port, is_apple: isIphone});
     if(!r.success){apduLogMsg('❌ '+r.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    await doPostConnect(isIphone);
+}
+async function doPostConnect(isIphone){
+    if(typeof isIphone==='undefined'){
+        var port=document.getElementById('portSelect').value;
+        var selPort=(window._portList||[]).find(function(p){return p.device===port;});
+        isIphone=selPort&&selPort.description&&selPort.description.toLowerCase().indexOf('iphone')>=0;
+    }
+    stopApduPoll();
     apduLogMsg('Scanning channels...');
     var at=await api('/at_check',{});
-    if(!at.success){apduLogMsg('❌ '+at.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    if(!at.success){
+        if(at.error==='SIM access failed'){
+            apduLogMsg('❌ SIM access failed — check 3GPP AT and SIM');
+        }else{
+            apduLogMsg('❌ '+at.error);
+        }
+        btn.disabled=false;btn.textContent='🔌 Connect';return;
+    }
     if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');btn.disabled=false;btn.textContent='🔌 Connect';return;}
     hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
     const isCcho=at.dir&&at.dir.aids&&at.dir.aids.length>0;
-    // CFUN reset for Qualcomm/LSI (ISIM found via scan)
-    if(!isCcho&&at.isim_lchan>=0){
+    const isimNotFound=!isCcho&&at.isim_lchan<0;
+    // CFUN reset for Qualcomm/LSI (ISIM found via scan, not iPhone)
+    if(!isCcho&&at.isim_lchan>=0&&!isIphone){
         apduLogMsg('Modem reset (AT+CFUN 0/1)...');
         var cfun=await api('/cfun_reset',{});
         if(cfun.success){
@@ -501,11 +560,14 @@ async function doConnect(){
         apduLogMsg('Reading EF.DIR...');
         apduLogMsg('Opening ISIM via AT+CCHO...');
         if(at.isim_lchan<0){apduLogMsg('❌ ISIM CCHO failed');}
+    }else if(isimNotFound){
+        apduLogMsg('❌ ISIM not available');
     }
     var isimStr=isCcho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
     apduLogMsg('Scanned: USIM ch'+at.usim_lchan+', ISIM '+isimStr);
     apduLogMsg('Reading EF.ARR...');
-    await loadArrData();
+    var arrOk=await loadArrData();
+    if(!arrOk){apduLogMsg('❌ EF.ARR read failed');}
     apduLogMsg('Reading ICCID/IMSI/MSISDN...');
     var info=await api('/read_info',{});
     if(info.iccid||info.imsi||info.msisdn){
@@ -517,6 +579,8 @@ async function doConnect(){
         document.getElementById('simMsisdnSep').style.display=(info.imsi&&info.msisdn)?'':'none';
         document.getElementById('simMsisdn').innerHTML=info.msisdn?(lbl+'MSISDN</span>'+val+info.msisdn+'</span>'):'';
         document.getElementById('simInfoArea').style.display='flex';
+    }else{
+        apduLogMsg('❌ Failed to read ICCID/IMSI/MSISDN');
     }
     // Cache for green dots
     if(info.iccid){readCache['MF/EF.ICCID']={success:true,structure:'transparent',data:info._iccid_hex||'',decoded:{iccid:info.iccid},meta:info._iccid_meta||{}};}
@@ -553,7 +617,7 @@ async function doDisconnect(){
 async function loadArrData(){
     try{
         var r=await api('/read_arr',{});
-        if(r.success&&r.arr){
+        if(r.success&&r.arr&&Object.keys(r.arr).length>0){
             arrData=r.arr;
             // Pre-populate readCache for ARR files (green dot + decoded data)
             for(var path in r.arr){
@@ -568,8 +632,10 @@ async function loadArrData(){
                     meta:a.meta||{}
                 };
             }
+            return true;
         }
-    }catch(e){console.error('ARR load failed:',e);}
+        return false;
+    }catch(e){console.error('ARR load failed:',e);return false;}
 }
 
 /* === File Tree === */
@@ -621,7 +687,13 @@ async function doRead(){
     const r=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});
     await pollApduLog();
     _isReading=false;
-    // Always cache the result
+    // Apple modem recovered — re-run post-connect flow
+    if(r.error==='APPLE_RESET'){
+        apduLogMsg('🔄 Re-initializing after modem recovery...');
+        await doPostConnect();
+        return;
+    }
+    // Always cache the result (except APPLE_RESET — allow re-read on next click)
     if(r.success){readCache[f.path]=r;}else{readCache[f.path]={error:r.error,sw:r.sw,meta:r.meta};}
     // Only update UI if this file is still selected
     if(f===selectedFile){

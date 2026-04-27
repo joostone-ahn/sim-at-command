@@ -61,8 +61,10 @@ def _get_adb_models() -> dict:
 def connect():
     """Connect to serial port."""
     port = request.json.get('port', '')
+    is_apple = request.json.get('is_apple', False)
     if not port:
         return jsonify({'success': False, 'error': 'Please select a port'})
+    modem.is_apple = bool(is_apple)
     result = modem.connect(port)
     return jsonify(result)
 
@@ -72,6 +74,7 @@ def disconnect():
     """Disconnect from modem."""
     global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho, adm_keys
     modem.disconnect()
+    modem.is_apple = False
     usim_aid = ''
     isim_aid = ''
     usim_lchan = 0
@@ -92,6 +95,9 @@ def at_check():
         return jsonify({'success': False, 'error': 'No AT response'})
     # 2. Scan channels
     channels = modem.scan_channels()
+    # 2b. If no channel responded, SIM access failed
+    if not channels.get('csim_ok'):
+        return jsonify({'success': False, 'error': 'SIM access failed'})
     # 3. Process scan results
     usim_aid = ''
     isim_aid = ''
@@ -642,6 +648,8 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
         retrieve_apdu = f'{cla:02X}CB0080018000'
         r = modem.csim_send(retrieve_apdu)
         log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
+        if r.get('apple_reset'):
+            return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
         all_data = r.get('data', '')
         sw = r.get('sw', '')
         while sw.startswith('62'):
@@ -673,6 +681,8 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
             modem._log_apdu('msg', f'READ RECORD #{i} ({record_len} bytes)')
             r = modem.csim_read_record(i, record_len, lchan=lchan)
             log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
+            if r.get('apple_reset'):
+                return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
             sw = r.get('sw', '')
             if sw.startswith('90'):
                 records.append(r.get('data', ''))
@@ -692,6 +702,8 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
         modem._log_apdu('msg', f'READ BINARY ({read_len} bytes)')
         r = modem.csim_read_binary(read_len, lchan=lchan)
         log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
+        if r.get('apple_reset'):
+            return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
         sw = r.get('sw', '')
         data = r.get('data', '')
         if not sw.startswith('90') and not data:
@@ -994,6 +1006,8 @@ def _select_file_chain(path: str, lchan: int = 0) -> dict:
         apdu = f'{cla:02X}A40804{lc:02X}{fid_path}'
         r = modem.csim_send(apdu)
         sw = r.get('sw', '')
+        if r.get('apple_reset'):
+            return {'success': False, 'error': 'APPLE_RESET'}
         if sw.startswith('90') or sw.startswith('61') or sw.startswith('9F'):
             return {'success': True, 'fcp': r.get('data', ''), 'sw': sw}
         return {'success': False, 'error': f'SELECT path {fid_path} failed: SW={sw}', 'sw': sw}
@@ -1021,6 +1035,8 @@ def _select_file_chain(path: str, lchan: int = 0) -> dict:
         apdu = f'{cla:02X}A40804{lc:02X}{fid_path}'
         r = modem.csim_send(apdu)
         sw = r.get('sw', '')
+        if r.get('apple_reset'):
+            return {'success': False, 'error': 'APPLE_RESET'}
         if sw.startswith('90') or sw.startswith('61') or sw.startswith('9F'):
             return {'success': True, 'fcp': r.get('data', ''), 'sw': sw}
         return {'success': False, 'error': f'SELECT path {fid_path} failed: SW={sw}', 'sw': sw}
