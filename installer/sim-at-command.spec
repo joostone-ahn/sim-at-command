@@ -1,88 +1,106 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for SIM AT Command Tool — single-file exe build.
-
-Usage (from installer/ directory):
-    python -m PyInstaller --clean --noconfirm sim-at-command.spec
-"""
+# PyInstaller spec file for SIM AT Command Tool
 
 import os
 import sys
-from pathlib import Path
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
+block_cipher = None
+
+# Project root (one level up from installer/)
 PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, '..'))
-SRC_DIR = os.path.join(PROJECT_ROOT, 'src')
-PYSIM_DIR = os.path.join(PROJECT_ROOT, 'pysim')
 
-# ---------------------------------------------------------------------------
-# Hidden imports — pySim uses many lazy / dynamic imports
-# ---------------------------------------------------------------------------
-hidden = []
-hidden += collect_submodules('pySim')
-hidden += collect_submodules('construct')
-hidden += collect_submodules('pyosmocom')
-hidden += [
-    'serial',
-    'serial.tools',
-    'serial.tools.list_ports',
-    'flask',
-    'jinja2',
-    'markupsafe',
-    'cmd2',
-    'jsonpath_ng',
-    'bidict',
-    'yaml',
-    'termcolor',
-    'colorlog',
-    'Cryptodome',
-    'pytlv',
-    'packaging',
-    'asn1tools',
-]
-
-# ---------------------------------------------------------------------------
-# Data files to bundle
-# ---------------------------------------------------------------------------
-datas = [
-    # Flask templates
-    (os.path.join(SRC_DIR, 'templates'), os.path.join('src', 'templates')),
-    # pySim ASN.1 definitions (needed at runtime)
-    (os.path.join(PYSIM_DIR, 'pySim', 'esim', 'asn1'), os.path.join('pysim', 'pySim', 'esim', 'asn1')),
-]
-
-# Collect pySim package data (asn files etc.) via hook
-pysim_data = collect_data_files('pySim')
-datas += pysim_data
-
-# ---------------------------------------------------------------------------
-# Analysis
-# ---------------------------------------------------------------------------
 a = Analysis(
     [os.path.join(SPECPATH, 'launcher.py')],
-    pathex=[SRC_DIR, PYSIM_DIR],
+    pathex=[
+        os.path.join(PROJECT_ROOT, 'src'),
+        os.path.join(PROJECT_ROOT, 'pysim'),
+    ],
     binaries=[],
-    datas=datas,
-    hiddenimports=hidden,
+    datas=[
+        # Flask templates
+        (os.path.join(PROJECT_ROOT, 'src', 'templates'), os.path.join('src', 'templates')),
+        # Source modules (imported at runtime)
+        (os.path.join(PROJECT_ROOT, 'src', 'app.py'), os.path.join('src', '.')),
+        (os.path.join(PROJECT_ROOT, 'src', 'at_modem.py'), os.path.join('src', '.')),
+        (os.path.join(PROJECT_ROOT, 'src', 'decoder.py'), os.path.join('src', '.')),
+        (os.path.join(PROJECT_ROOT, 'src', 'sim_files.py'), os.path.join('src', '.')),
+        # pySim package
+        (os.path.join(PROJECT_ROOT, 'pysim', 'pySim'), 'pySim'),
+    ],
+    hiddenimports=[
+        'flask',
+        'jinja2',
+        'markupsafe',
+        'serial',
+        'serial.tools',
+        'serial.tools.list_ports',
+        'construct',
+        'bidict',
+        'osmocom',
+        'osmocom.utils',
+        'osmocom.tlv',
+        'osmocom.construct',
+        'yaml',
+        'colorlog',
+        'jsonpath_ng',
+        'Cryptodome',
+        'asn1tools',
+        'packaging',
+        'cmd2',
+        'pytlv',
+        'termcolor',
+        'pySim',
+        'pySim.filesystem',
+        'pySim.ts_102_221',
+        'pySim.ts_31_102',
+        'pySim.ts_31_103',
+        'pySim.ts_31_102_telecom',
+        'pySim.ts_31_103_shared',
+        'pySim.legacy',
+        'pySim.legacy.cards',
+        'pySim.cat',
+        'pySim.ota',
+        'pySim.euicc',
+        'pySim.ara_m',
+        'pySim.cdma_ruim',
+        'pySim.sysmocom_sja2',
+        'pySim.gsm_r',
+        'pySim.ts_51_011',
+        'pySim.ts_102_222',
+        'pySim.ts_31_104',
+        'pySim.ts_24_526',
+        'pySim.esim',
+        'pySim.esim.saip',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Exclude heavy packages not needed at runtime
-        'tkinter', '_tkinter', 'matplotlib', 'numpy', 'scipy',
-        'PIL', 'IPython', 'notebook', 'pytest',
-        'twisted', 'klein', 'psycopg2',
-        'pyscard',          # PC/SC smart card — not used (AT modem only)
+        'tkinter',
+        'matplotlib',
+        'scipy',
+        'numpy.testing',
+        'PIL',
+        'cv2',
+        'twisted',
+        'klein',
+        'psycopg2',
+        'pyscard',
         'smartcard',
     ],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
     name='SIM-AT-Command',
@@ -92,8 +110,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,           # Keep console window for AT log output
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    icon=None,              # Add .ico path here if desired
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=None,
 )
