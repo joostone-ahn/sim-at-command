@@ -35,7 +35,7 @@ REM ── Install dependencies ────────────────
 echo [2/4] Installing dependencies...
 
 "%PYTHON%" -m pip install --disable-pip-version-check -q ^
-    flask pyserial
+    flask pyserial pyscard
 
 if errorlevel 1 (
     echo [ERROR] Failed to install core dependencies.
