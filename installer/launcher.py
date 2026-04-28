@@ -46,6 +46,10 @@ def main():
     # Import Flask app after path setup
     from app import app
 
+    # Frozen 환경에서 Flask template 경로를 명시적으로 지정
+    template_dir = os.path.join(src_dir, 'templates')
+    app.template_folder = template_dir
+
     print()
     print('  +========================================+')
     print('  |  SIM AT Command Tool -- Web UI          |')
