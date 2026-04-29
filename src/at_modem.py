@@ -24,7 +24,6 @@ class ATModem:
         self.apdu_log_max = 500
         self.is_apple = False  # Apple modem: auto CFUN reset on CSIM ERROR
         self._cfun_retrying = False  # Guard against recursive CFUN retry
-        self._scanning = False  # True during channel scan — suppress CFUN reset
 
     def connect(self, port: str = None) -> dict:
         """Connect to serial port and verify AT response."""
@@ -140,8 +139,7 @@ class ATModem:
         sw = result.get('sw', '')
 
         # Apple modem: CFUN reset on CSIM ERROR, return error to caller
-        # Skip during channel scan — ERROR is expected for unsupported channels
-        if not sw and result.get('error') and self.is_apple and not self._cfun_retrying and not self._scanning:
+        if not sw and result.get('error') and self.is_apple and not self._cfun_retrying:
             logger.warning("[CSIM] ERROR on Apple modem — performing CFUN reset")
             self._log_apdu('msg', '⚠️ CSIM ERROR — CFUN reset & retry')
             self._cfun_retrying = True
@@ -184,39 +182,35 @@ class ATModem:
         usim_prefix = 'A0000000871002'
         isim_prefix = 'A0000000871004'
         fail_count = 0
-        self._scanning = True
-        try:
-            for ch in range(20):
-                cla = _cla_for_lchan(ch, proprietary=True)
-                r = self.csim_send(f'{cla:02X}F2000000')
-                sw = r.get('sw', '')
-                data = r.get('data', '')
-                if not (sw.startswith('90') or sw.startswith('61')) or not data:
-                    fail_count += 1
-                    # 6E00 = class not supported → extended channels not available
-                    if ch > 3 and (fail_count >= 2 or sw == '6E00'):
-                        break
-                    continue
-                fail_count = 0
-                result['csim_ok'] = True
-                aid = _extract_aid_from_fcp(data)
-                if aid:
-                    aid_upper = aid.upper()
-                    if aid_upper.startswith(usim_prefix) and 'usim' not in result:
-                        result['usim'] = {'lchan': ch, 'aid': aid_upper}
-                        logger.info("[SCAN] Channel %d: USIM (%s)", ch, aid_upper)
-                    elif aid_upper.startswith(isim_prefix) and 'isim' not in result:
-                        result['isim'] = {'lchan': ch, 'aid': aid_upper}
-                        logger.info("[SCAN] Channel %d: ISIM (%s)", ch, aid_upper)
-                else:
-                    # Channel responds but no AID (e.g. MF selected) — assume USIM on channel 0
-                    if ch == 0 and 'usim' not in result:
-                        result['usim'] = {'lchan': 0, 'aid': ''}
-                        logger.info("[SCAN] Channel 0: USIM (no AID, assumed)")
-                if 'usim' in result and 'isim' in result:
+        for ch in range(20):
+            cla = _cla_for_lchan(ch, proprietary=True)
+            r = self.csim_send(f'{cla:02X}F2000000')
+            sw = r.get('sw', '')
+            data = r.get('data', '')
+            if not (sw.startswith('90') or sw.startswith('61')) or not data:
+                fail_count += 1
+                # 6E00 = class not supported → extended channels not available
+                if ch > 3 and (fail_count >= 2 or sw == '6E00'):
                     break
-        finally:
-            self._scanning = False
+                continue
+            fail_count = 0
+            result['csim_ok'] = True
+            aid = _extract_aid_from_fcp(data)
+            if aid:
+                aid_upper = aid.upper()
+                if aid_upper.startswith(usim_prefix) and 'usim' not in result:
+                    result['usim'] = {'lchan': ch, 'aid': aid_upper}
+                    logger.info("[SCAN] Channel %d: USIM (%s)", ch, aid_upper)
+                elif aid_upper.startswith(isim_prefix) and 'isim' not in result:
+                    result['isim'] = {'lchan': ch, 'aid': aid_upper}
+                    logger.info("[SCAN] Channel %d: ISIM (%s)", ch, aid_upper)
+            else:
+                # Channel responds but no AID (e.g. MF selected) — assume USIM on channel 0
+                if ch == 0 and 'usim' not in result:
+                    result['usim'] = {'lchan': 0, 'aid': ''}
+                    logger.info("[SCAN] Channel 0: USIM (no AID, assumed)")
+            if 'usim' in result and 'isim' in result:
+                break
         # Fallback: if no USIM found, default to channel 0
         if 'usim' not in result:
             result['usim'] = {'lchan': 0, 'aid': ''}
