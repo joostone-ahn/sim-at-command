@@ -91,18 +91,20 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
         <div style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
             <span class="setup-label">Serial Port</span>
             <select id="portSelect" class="input-sm" style="min-width:300px;height:22px;padding:1px 8px;font-size:0.72rem"></select>
-            <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
-            <button class="btn btn-dark" onclick="refreshPorts()" style="height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">🔄 Refresh</button>
+            <button class="btn btn-dark" onclick="refreshPorts()" title="Refresh ports" style="height:22px;width:22px;padding:0;font-size:0.72rem;line-height:22px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">🔄</button>
             <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
             <button class="btn btn-primary" id="btnConnect" onclick="doConnect()" style="height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">🔌 Connect</button>
             <button class="btn btn-danger" id="btnDisconnect" onclick="doDisconnect()" style="display:none;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">⏏ Disconnect</button>
+            <button class="btn" id="btnCfunReset" onclick="doCfunReset()" style="display:none;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box;background:#f0ad4e;color:#fff;border:1px solid #eea236;border-radius:5px">⚡ SIM Reset</button>
         </div>
         <span id="connectStatus" class="status-badge" style="display:none"></span>
         <div id="simInfoArea" style="display:none;align-items:center;gap:10px">
             <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
             <div style="display:flex;align-items:center;gap:10px;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
+                <!-- ICCID disabled for now
                 <span id="simIccid" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
                 <div id="simIccidSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0;display:none"></div>
+                -->
                 <span id="simImsi" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
                 <div id="simMsisdnSep" style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
                 <span id="simMsisdn" style="display:flex;align-items:center;font-size:0.70rem;font-family:var(--mono)"></span>
@@ -568,28 +570,32 @@ async function doPostConnect(isIphone){
     apduLogMsg('Reading EF.ARR...');
     var arrOk=await loadArrData();
     if(!arrOk){apduLogMsg('❌ EF.ARR read failed');}
-    apduLogMsg('Reading ICCID/IMSI/MSISDN...');
+    apduLogMsg('Reading IMSI/MSISDN...');
     var info=await api('/read_info',{});
-    if(info.iccid||info.imsi||info.msisdn){
+    if(info.imsi||info.msisdn){
         var lbl='<span class="setup-label" style="min-width:auto;padding:0 8px 0 4px">';
         var val='<span style="font-weight:600;color:#333;font-size:0.72rem;font-family:var(--mono)">';
+        /* ICCID disabled for now
         document.getElementById('simIccid').innerHTML=info.iccid?(lbl+'ICCID</span>'+val+info.iccid+'</span>'):'';
         document.getElementById('simIccidSep').style.display=(info.iccid&&info.imsi)?'':'none';
+        */
         document.getElementById('simImsi').innerHTML=info.imsi?(lbl+'IMSI</span>'+val+info.imsi+'</span>'):'';
         document.getElementById('simMsisdnSep').style.display=(info.imsi&&info.msisdn)?'':'none';
         document.getElementById('simMsisdn').innerHTML=info.msisdn?(lbl+'MSISDN</span>'+val+info.msisdn+'</span>'):'';
         document.getElementById('simInfoArea').style.display='flex';
     }else{
-        apduLogMsg('❌ Failed to read ICCID/IMSI/MSISDN');
+        apduLogMsg('⚠️ Could not read IMSI/MSISDN');
     }
     // Cache for green dots
+    /* ICCID cache disabled for now
     if(info.iccid){readCache['MF/EF.ICCID']={success:true,structure:'transparent',data:info._iccid_hex||'',decoded:{iccid:info.iccid},meta:info._iccid_meta||{}};}
+    */
     if(info.imsi){readCache['ADF.USIM/EF.IMSI']={success:true,structure:'transparent',data:info._imsi_hex||'',decoded:{imsi:info.imsi},meta:info._imsi_meta||{}};}
     if(info.msisdn||info._msisdn_all_hex){var mData=info._msisdn_all_hex||[info._msisdn_hex||''];var mNum=info._msisdn_numrecs||mData.length;readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:mData,decoded:info._msisdn_decoded||[],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:mNum};}
     // Cache EF.DIR if read during fallback
     if(at.dir&&at.dir.records&&at.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:at.dir.records,meta:at.dir.meta||{},record_len:(at.dir.meta||{}).record_len||0,num_records:at.dir.records.length};}
     apduLogMsg('✅ Connected');
-    document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('portSelect').disabled=true;
+    document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('btnCfunReset').style.display='';document.getElementById('portSelect').disabled=true;
     document.getElementById('admArea').style.display='flex';
     await api('/apdu_log_clear',{});_apduLogIdx=0;
     startApduPoll();
@@ -597,12 +603,14 @@ async function doPostConnect(isIphone){
 }
 async function doDisconnect(){
     await api('/disconnect',{});setBadge('connectStatus','','');
-    document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';document.getElementById('btnDisconnect').style.display='none';document.getElementById('portSelect').disabled=false;
+    document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';document.getElementById('btnDisconnect').style.display='none';document.getElementById('btnCfunReset').style.display='none';document.getElementById('portSelect').disabled=false;
     admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
     arrData={};hasIsim=false;hasUsim=false;
     document.getElementById('admArea').style.display='none';
     document.getElementById('simInfoArea').style.display='none';
+    /* ICCID disabled for now
     document.getElementById('simIccid').textContent='';
+    */
     document.getElementById('simImsi').textContent='';
     document.getElementById('simMsisdn').textContent='';
     for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
@@ -613,6 +621,29 @@ async function doDisconnect(){
     document.getElementById('fileTree').innerHTML='';
     document.getElementById('searchInput').value='';
     setStep(1);stopApduPoll();clearApduLog();
+}
+async function doCfunReset(){
+    var btn=document.getElementById('btnCfunReset');
+    btn.disabled=true;btn.textContent='Resetting...';
+    // Clear UI and APDU log immediately
+    await api('/apdu_log_clear',{});_apduLogIdx=0;clearApduLog();
+    apduLogMsg('⚡ SIM Reset (AT+CFUN=0/1)...');
+    readCache={};selectedFile=null;allFiles=[];arrData={};
+    admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
+    for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
+    document.getElementById('fileTree').innerHTML='';
+    document.getElementById('searchInput').value='';
+    document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
+    document.getElementById('detailFileName').textContent='';
+    resetDetailButtons();
+    // Send CFUN 0/1 via raw AT commands (no scan — doPostConnect handles it)
+    await api('/at_raw',{cmd:'AT+CFUN=0'});
+    await new Promise(r=>setTimeout(r,1000));
+    await api('/at_raw',{cmd:'AT+CFUN=1'});
+    await new Promise(r=>setTimeout(r,2000));
+    btn.disabled=false;btn.textContent='⚡ SIM Reset';
+    apduLogMsg('✅ SIM Reset complete — re-initializing...');
+    await doPostConnect();
 }
 async function loadArrData(){
     try{
@@ -740,8 +771,8 @@ function _renderDecodeView(f,r){
             if(readCond||writeCond){
                 errHtml+='<div style="margin-top:10px;padding:10px 12px;background:#fff8f0;border:1px solid #f0d0a0;border-radius:6px;font-size:0.72rem;display:table">';
                 errHtml+='<div style="font-weight:600;color:#d35400;margin-bottom:6px">📋 ARR Access Conditions</div>';
-                if(readCond){var rc=readCond.value||readCond.type;var rcC=readCond.type==='adm'?'#e67e22':'#888';errHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:#888;min-width:50px">Read:</span><span style="color:'+rcC+';font-weight:600">'+rc+'</span>';if(readCond.type==='adm'){errHtml+=isAdmSatisfied(readCond)?'<span style="color:#27ae60;font-size:0.66rem">✅ Verified</span>':'<span style="color:#c0392b;font-size:0.66rem">❌ Not verified</span>';}errHtml+='</div>';}
-                if(writeCond){var wc=writeCond.value||writeCond.type;var wcC=writeCond.type==='adm'?'#e67e22':'#888';errHtml+='<div style="display:flex;align-items:center;gap:6px"><span style="color:#888;min-width:50px">Update:</span><span style="color:'+wcC+';font-weight:600">'+wc+'</span>';if(writeCond.type==='adm'){errHtml+=isAdmSatisfied(writeCond)?'<span style="color:#27ae60;font-size:0.66rem">✅ Verified</span>':'<span style="color:#c0392b;font-size:0.66rem">❌ Not verified</span>';}errHtml+='</div>';}
+                if(readCond){var rc=readCond.value||readCond.type;var rcC=readCond.type==='adm'?'#e67e22':'#888';errHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:#888;min-width:50px">Read:</span><span style="color:'+rcC+';font-weight:600">'+rc+'</span></div>';}
+                if(writeCond){var wc=writeCond.value||writeCond.type;var wcC=writeCond.type==='adm'?'#e67e22':'#888';errHtml+='<div style="display:flex;align-items:center;gap:6px"><span style="color:#888;min-width:50px">Update:</span><span style="color:'+wcC+';font-weight:600">'+wc+'</span></div>';}
                 errHtml+='</div>';
             }
         }
@@ -763,7 +794,7 @@ function _renderDecodeView(f,r){
 function _renderRawView(f,r){
     var rv=document.getElementById('rawView');
     var W='<div class="data-wrap">',WE='</div>';
-    if(r.error&&!r.success){rv.innerHTML='<div style="color:#bbb;padding:15px 15px 15px 20px">(no data)</div>';return;}
+    if(r.error&&!r.success){var sw=r.sw||'';var desc=swText(sw);var errMsg=sw?(esc(sw)+(desc?' : '+esc(desc):'')):(esc(r.error)||'Read failed');rv.innerHTML='<div style="padding:15px 15px 15px 20px"><span style="color:#e74c3c;font-size:0.74rem">'+errMsg+'</span></div>';return;}
     if(r.structure==='linear_fixed'||r.structure==='cyclic'){
         if(Array.isArray(r.data)){var h='<table class="rec-table"><thead><tr><th>#</th><th>Hex Data</th></tr></thead><tbody>';r.data.forEach((rec,i)=>{h+=`<tr><td>${i+1}</td><td>${rec?rec.toUpperCase():'<span style="color:#e74c3c">null</span>'}</td></tr>`;});h+='</tbody></table>';rv.innerHTML=W+h+WE;}
     }else{rv.innerHTML=`<div class="hex-display">${(r.data||'').toUpperCase()||'<span style="color:#bbb">(empty)</span>'}</div>`;}
