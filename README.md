@@ -4,7 +4,6 @@ A web-based tool for reading, writing, and decoding SIM/USIM/ISIM card files via
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-Web_UI-000000?logo=flask&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)
 
 ---
