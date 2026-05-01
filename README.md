@@ -14,7 +14,7 @@ As eSIM-only devices become the industry standard, physically removing a SIM car
 
 ---
 
-## Key Features
+## ⚡ Key Features
 
 - **Logical channel auto-scan** — automatically identifies USIM/ISIM across channels 0–19
 - **Multi-chipset support** — Qualcomm, Samsung LSI, MediaTek, Apple (with auto-recovery)
@@ -27,7 +27,7 @@ As eSIM-only devices become the industry standard, physically removing a SIM car
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 **Requirements:** [Python 3.10+](https://www.python.org/downloads/) — other dependencies are installed automatically on first run.
 
@@ -46,7 +46,7 @@ Browser opens automatically at `http://127.0.0.1:8083`.
 
 ---
 
-## How to Use
+## 📖 How to Use
 
 ### 0. Device Setup (Prerequisites)
 
@@ -132,7 +132,7 @@ Click **Write** to open the editor popup:
 
 ---
 
-## Modem Compatibility
+## 📋 Modem Compatibility
 
 | Platform | Chipset | AT+CSIM | Logical channel scan (NOTE1) | AID SELECT | AT+CCHO/CGLA | ISIM access | RETRIEVE DATA |
 |---|---|---|---|---|---|---|---|
@@ -156,7 +156,7 @@ Click **Write** to open the editor popup:
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 run.command / run.bat    # One-click launchers
@@ -173,7 +173,7 @@ pysim/                   # pySim (Osmocom, modified)
 
 ---
 
-## pySim Modifications
+## 🔧 pySim Modifications
 
 - `ts_102_221.py` — SecurityAttribReferenced: 6-byte long format (SEID) ARR record fix
 - `ts_24_526.py` — URSP decoder (3GPP TS 24.526)
@@ -183,7 +183,7 @@ pysim/                   # pySim (Osmocom, modified)
 
 ---
 
-## License
+## 📄 License
 
 ### This Project
 
