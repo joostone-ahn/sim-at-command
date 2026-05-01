@@ -29,3 +29,6 @@ sim-reader/
 installer/dist/
 installer/build/
 installer/.build_venv/
+
+# Docs (local only)
+docs/
