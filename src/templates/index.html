@@ -588,9 +588,9 @@ async function doPostConnect(isIphone){
         }else{
             apduLogMsg('❌ '+at.error);
         }
-        btn.disabled=false;btn.textContent='🔌 Connect';return;
+        _resetConnectionUI();return;
     }
-    if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');_resetConnectionUI();return;}
     hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
     const isCcho=at.dir&&at.dir.aids&&at.dir.aids.length>0;
     const isimNotFound=!isCcho&&at.isim_lchan<0;
