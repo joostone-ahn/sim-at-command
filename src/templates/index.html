@@ -120,10 +120,6 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                     <span><span id="admDot4" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM4</span>
                 </div>
             </div>
-            <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
-            <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
-                <button class="btn" id="btnCfunReset" onclick="doCfunReset()" style="white-space:nowrap;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box;background:#f0ad4e;color:#fff;border:1px solid #eea236;border-radius:5px">⚡ SIM Reset</button>
-            </div>
         </div>
     </div>
     <div class="card" style="padding:8px;margin-bottom:0;flex:1;display:flex;flex-direction:column;min-height:0">
@@ -359,7 +355,7 @@ let admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};
 let admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
 let arrData={};  // {'MF/EF.ARR': [{decoded records}], 'ADF.USIM/EF.ARR': [...]}
 let _lastViewMode='decode';
-let hasIsim=false,hasUsim=false;
+let hasIsim=false;
 const PLMN_FILES_WITH_ACT=['EF.PLMNwAcT','EF.OPLMNwAcT','EF.HPLMNwAcT'];
 const PLMN_FILES_NO_ACT=['EF.FPLMN','EF.EHPLMN'];
 function isPlmnFile(name){return PLMN_FILES_WITH_ACT.includes(name)||PLMN_FILES_NO_ACT.includes(name);}
@@ -522,7 +518,7 @@ function _resetConnectionUI(){
 }
 async function _resetData(){
     admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
-    arrData={};hasIsim=false;hasUsim=false;
+    arrData={};hasIsim=false;
     for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
     document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
     document.getElementById('detailFileName').textContent='';
@@ -586,35 +582,69 @@ async function doPostConnect(isIphone){
     var at=await api('/at_check',{});
     if(!at.success){
         if(at.error==='SIM access failed'){
-            apduLogMsg('❌ SIM access failed — check 3GPP AT and SIM');
+            apduLogMsg('❌ SIM access failed — No SIM response on any channel');
+        }else if(at.error==='USIM not found on any channel'){
+            if(isIphone){
+                apduLogMsg('❌ Channel scan failed — USIM not found');
+                apduLogMsg('Modem reset (AT+CFUN 0/1)...');
+                var ar=await api('/apple_reset',{});
+                if(ar.success){
+                    apduLogMsg('✅ Modem recovered — re-scanning...');
+                    await doPostConnect(isIphone);
+                    return;
+                }else{
+                    apduLogMsg('❌ Modem reset failed: '+(ar.error||'timeout'));
+                }
+            }else{
+                apduLogMsg('❌ USIM not found on any channel');
+            }
         }else{
             apduLogMsg('❌ '+at.error);
         }
         _resetConnectionUI();return;
     }
     if(!at.csim){apduLogMsg('⚠️ AT OK but CSIM not supported');_resetConnectionUI();return;}
-    hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
-    const isCcho=at.dir&&at.dir.aids&&at.dir.aids.length>0;
-    const isimNotFound=!isCcho&&at.isim_lchan<0;
-    // CFUN reset for Qualcomm/LSI (ISIM found via scan, not iPhone)
-    if(!isCcho&&at.isim_lchan>=0&&!isIphone){
+    hasIsim=!!at.isim_aid;
+    // ISIM not found via scan — try CCHO fallback
+    if(at.isim_lchan<0){
+        apduLogMsg('ISIM not found via scan');
+        apduLogMsg('Reading EF.DIR...');
+        var fb=await api('/isim_fallback',{});
+        if(fb.success){
+            at.isim_aid=fb.isim_aid||at.isim_aid;
+            at.isim_lchan=fb.isim_lchan;
+            at.isim_ccho=fb.isim_ccho;
+            hasIsim=!!at.isim_aid;
+            if(!fb.aids||!fb.aids.length){
+                apduLogMsg('❌ EF.DIR read failed or empty');
+            }else if(!fb.isim_aid){
+                apduLogMsg('❌ ISIM AID not found in EF.DIR');
+            }else if(fb.ccho_ok){
+                apduLogMsg('Opening ISIM via AT+CCHO... session '+fb.isim_lchan);
+            }else{
+                apduLogMsg('❌ AT+CCHO failed for ISIM');
+            }
+            // Cache EF.DIR if read during fallback
+            if(fb.dir&&fb.dir.records&&fb.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:fb.dir.records,meta:fb.dir.meta||{},record_len:(fb.dir.meta||{}).record_len||0,num_records:fb.dir.records.length};}
+        }else{
+            apduLogMsg('❌ ISIM fallback failed: '+(fb.error||'unknown'));
+        }
+    }
+    var isimNotFound=at.isim_lchan<0;
+    // CFUN reset for Qualcomm/LSI (not CCHO fallback, not iPhone)
+    if(!at.isim_ccho&&!isIphone){
         apduLogMsg('Modem reset (AT+CFUN 0/1)...');
         var cfun=await api('/cfun_reset',{});
         if(cfun.success){
             at.usim_lchan=cfun.usim_lchan;at.isim_lchan=cfun.isim_lchan;
-            at.usim_aid=cfun.usim_aid||at.usim_aid;at.isim_aid=cfun.isim_aid||at.isim_aid;
-            hasUsim=!!at.usim_aid;hasIsim=!!at.isim_aid;
+            at.isim_aid=cfun.isim_aid||at.isim_aid;
+            hasIsim=!!at.isim_aid;
         }
     }
-    if(isCcho){
-        apduLogMsg('ISIM not found via scan');
-        apduLogMsg('Reading EF.DIR...');
-        apduLogMsg('Opening ISIM via AT+CCHO...');
-        if(at.isim_lchan<0){apduLogMsg('❌ ISIM CCHO failed');}
-    }else if(isimNotFound){
+    if(isimNotFound){
         apduLogMsg('❌ ISIM not available');
     }
-    var isimStr=isCcho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
+    var isimStr=at.isim_ccho?'CCHO session '+at.isim_lchan:(at.isim_lchan>=0?'ch'+at.isim_lchan:'N/A');
     apduLogMsg('Scanned: USIM ch'+at.usim_lchan+', ISIM '+isimStr);
     apduLogMsg('Reading EF.ARR...');
     var arrOk=await loadArrData();
@@ -641,8 +671,6 @@ async function doPostConnect(isIphone){
     */
     if(info.imsi){readCache['ADF.USIM/EF.IMSI']={success:true,structure:'transparent',data:info._imsi_hex||'',decoded:{imsi:info.imsi},meta:info._imsi_meta||{}};}
     if(info.msisdn||info._msisdn_all_hex){var mData=info._msisdn_all_hex||[info._msisdn_hex||''];var mNum=info._msisdn_numrecs||mData.length;readCache['ADF.USIM/EF.MSISDN']={success:true,structure:'linear_fixed',data:mData,decoded:info._msisdn_decoded||[],meta:info._msisdn_meta||{},record_len:info._msisdn_reclen||0,num_records:mNum};}
-    // Cache EF.DIR if read during fallback
-    if(at.dir&&at.dir.records&&at.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:at.dir.records,meta:at.dir.meta||{},record_len:(at.dir.meta||{}).record_len||0,num_records:at.dir.records.length};}
     apduLogMsg('✅ Connected');
     document.getElementById('btnConnect').textContent='⚡ Connected';document.getElementById('btnConnect').disabled=true;document.getElementById('portSelect').disabled=true;
     document.getElementById('admArea').style.display='flex';
@@ -654,20 +682,6 @@ async function doDisconnect(){
     await api('/disconnect',{});
     _resetConnectionUI();
     await _resetData();
-}
-async function doCfunReset(){
-    var btn=document.getElementById('btnCfunReset');
-    btn.disabled=true;btn.textContent='Resetting...';
-    await _resetData();
-    apduLogMsg('⚡ SIM Reset (AT+CFUN=0/1)...');
-    // Send CFUN 0/1 via raw AT commands (no scan — doPostConnect handles it)
-    await api('/at_raw',{cmd:'AT+CFUN=0'});
-    await new Promise(r=>setTimeout(r,1000));
-    await api('/at_raw',{cmd:'AT+CFUN=1'});
-    await new Promise(r=>setTimeout(r,2000));
-    btn.disabled=false;btn.textContent='⚡ SIM Reset';
-    apduLogMsg('✅ SIM Reset complete — re-initializing...');
-    await doPostConnect();
 }
 async function loadArrData(){
     try{
@@ -742,13 +756,6 @@ async function doRead(){
     const r=await api('/read',{path:f.path,fid:f.fid,structure:f.structure});
     await pollApduLog();
     _isReading=false;
-    // Apple modem recovered — re-run post-connect flow
-    if(r.error==='APPLE_RESET'){
-        apduLogMsg('🔄 Re-initializing after modem recovery...');
-        await doPostConnect();
-        return;
-    }
-    // Always cache the result (except APPLE_RESET — allow re-read on next click)
     if(r.success){readCache[f.path]=r;}else{readCache[f.path]={error:r.error,sw:r.sw,meta:r.meta};}
     // Only update UI if this file is still selected
     if(f===selectedFile){

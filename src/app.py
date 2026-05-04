@@ -6,6 +6,7 @@ import sys
 import logging
 import platform
 import functools
+import time
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
 import serial
@@ -25,7 +26,6 @@ app.json.sort_keys = False
 logger = logging.getLogger(__name__)
 
 modem = ATModem()
-usim_aid = ''
 isim_aid = ''
 usim_lchan = 0    # Logical channel for USIM (from STATUS scan)
 isim_lchan = -1   # Logical channel for ISIM (-1 = not available via scan)
@@ -102,10 +102,9 @@ def connect():
 @app.route('/disconnect', methods=['POST'])
 def disconnect():
     """Disconnect from modem."""
-    global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho, adm_keys
+    global isim_aid, usim_lchan, isim_lchan, isim_ccho, adm_keys
     modem.disconnect()
     modem.is_apple = False
-    usim_aid = ''
     isim_aid = ''
     usim_lchan = 0
     isim_lchan = -1
@@ -114,11 +113,30 @@ def disconnect():
     return jsonify({'success': True})
 
 
+@app.route('/apple_reset', methods=['POST'])
+@_serial_safe
+def apple_reset():
+    """AT+CFUN power cycle for Apple modem, poll AT until GTI ready."""
+    if not modem.is_connected:
+        return jsonify({'success': False, 'error': 'Modem not connected'})
+    modem._send('AT+CFUN=0', timeout=3)
+    modem._send('AT+CFUN=1', timeout=2)
+    # Poll AT every 1s, wait for 'System is ready for GTI commands'
+    for i in range(30):
+        time.sleep(1)
+        resp = modem._send('AT')
+        if 'GTI' in resp:
+            logger.info("[INIT] Apple modem ready (GTI) after %d polls", i + 1)
+            time.sleep(3)
+            return jsonify({'success': True, 'polls': i + 1})
+    return jsonify({'success': False, 'error': 'GTI ready timeout (30s)'})
+
+
 @app.route('/at_check', methods=['POST'])
 @_serial_safe
 def at_check():
-    """Verify AT, scan channels, discover AIDs, CCHO fallback if needed."""
-    global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho
+    """Verify AT and scan channels to find USIM/ISIM."""
+    global isim_aid, usim_lchan, isim_lchan, isim_ccho
     if not modem.is_connected:
         return jsonify({'success': False, 'error': 'Modem not connected'})
     # 1. Verify AT
@@ -129,46 +147,59 @@ def at_check():
     # 2b. If no channel responded, SIM access failed
     if not channels.get('csim_ok'):
         return jsonify({'success': False, 'error': 'SIM access failed'})
+    if 'usim' not in channels:
+        return jsonify({'success': False, 'error': 'USIM not found on any channel'})
     # 3. Process scan results
-    usim_aid = ''
     isim_aid = ''
     usim_lchan = 0
     isim_lchan = -1
     isim_ccho = False
     if 'usim' in channels:
         usim_lchan = channels['usim']['lchan']
-        if channels['usim']['aid']:
-            usim_aid = channels['usim']['aid']
     if 'isim' in channels:
         isim_lchan = channels['isim']['lchan']
         isim_aid = channels['isim']['aid']
-    # 4. If ISIM not found via scan, read EF.DIR and try CCHO fallback
-    dir_result = {'aids': [], 'meta': {}, 'records': []}
-    if 'isim' not in channels:
-        dir_result = modem.read_ef_dir()
-        for aid in dir_result.get('aids', []):
-            aid_upper = aid.upper()
-            if aid_upper.startswith('A0000000871002') and not usim_aid:
-                usim_aid = aid_upper
-            elif aid_upper.startswith('A0000000871004'):
-                isim_aid = aid_upper
-        # Try CCHO fallback for ISIM
-        if isim_aid:
-            session = modem.ccho_open(isim_aid)
-            if session is not None:
-                isim_ccho = True
-                isim_lchan = session
-                logger.info("[AID] ISIM via AT+CCHO session %d", session)
-                modem.ccho_close(session)
-    logger.info("[AID] USIM=%s (ch%d), ISIM=%s (ch%d)",
-                usim_aid or '(none)', usim_lchan,
-                isim_aid or '(none)', isim_lchan)
+    logger.info("[AID] Scan: USIM ch%d, ISIM=%s (ch%d)",
+                usim_lchan, isim_aid or '(none)', isim_lchan)
     return jsonify({
         'success': True, 'csim': True,
-        'channels': channels, 'dir': dir_result,
-        'aids': dir_result.get('aids', []),
-        'usim_aid': usim_aid, 'isim_aid': isim_aid,
+        'channels': channels,
+        'isim_aid': isim_aid,
         'usim_lchan': usim_lchan, 'isim_lchan': isim_lchan,
+    })
+
+
+@app.route('/isim_fallback', methods=['POST'])
+@_serial_safe
+def isim_fallback():
+    """Read EF.DIR and try CCHO fallback for ISIM access."""
+    global isim_aid, isim_lchan, isim_ccho
+    if not modem.is_connected:
+        return jsonify({'success': False, 'error': 'Modem not connected'})
+    dir_result = modem.read_ef_dir()
+    for aid in dir_result.get('aids', []):
+        aid_upper = aid.upper()
+        if aid_upper.startswith('A0000000871004'):
+            isim_aid = aid_upper
+    # Try CCHO fallback for ISIM
+    ccho_ok = False
+    if isim_aid:
+        session = modem.ccho_open(isim_aid)
+        if session is not None:
+            isim_ccho = True
+            isim_lchan = session
+            ccho_ok = True
+            logger.info("[AID] ISIM via AT+CCHO session %d", session)
+            modem.ccho_close(session)
+    logger.info("[AID] Fallback: ISIM=%s (ch%d, ccho=%s)",
+                isim_aid or '(none)', isim_lchan, isim_ccho)
+    return jsonify({
+        'success': True,
+        'dir': dir_result,
+        'aids': dir_result.get('aids', []),
+        'isim_aid': isim_aid,
+        'isim_lchan': isim_lchan, 'isim_ccho': isim_ccho,
+        'ccho_ok': ccho_ok,
     })
 
 
@@ -176,22 +207,20 @@ def at_check():
 @_serial_safe
 def cfun_reset():
     """AT+CFUN power cycle and re-scan channels."""
-    global usim_aid, isim_aid, usim_lchan, isim_lchan
+    global isim_aid, usim_lchan, isim_lchan
     if not modem.is_connected:
         return jsonify({'success': False, 'error': 'Modem not connected'})
     modem.cfun_reset()
     channels = modem.scan_channels()
     if 'usim' in channels:
         usim_lchan = channels['usim']['lchan']
-        if channels['usim']['aid']:
-            usim_aid = channels['usim']['aid']
     if 'isim' in channels:
         isim_lchan = channels['isim']['lchan']
         if channels['isim']['aid']:
             isim_aid = channels['isim']['aid']
     return jsonify({
         'success': True, 'channels': channels,
-        'usim_aid': usim_aid, 'isim_aid': isim_aid,
+        'isim_aid': isim_aid,
         'usim_lchan': usim_lchan, 'isim_lchan': isim_lchan,
     })
 
@@ -357,7 +386,7 @@ def _enrich_expanded_arr(meta: dict):
 def get_files():
     """Return 3GPP standard SIM file tree."""
     tree = build_file_tree()
-    return jsonify({'files': tree, 'usim_aid': usim_aid, 'isim_aid': isim_aid})
+    return jsonify({'files': tree, 'isim_aid': isim_aid})
 
 
 @app.route('/read', methods=['POST'])
@@ -686,8 +715,6 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
         retrieve_apdu = f'{cla:02X}CB0080018000'
         r = modem.csim_send(retrieve_apdu)
         log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
-        if r.get('apple_reset'):
-            return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
         all_data = r.get('data', '')
         sw = r.get('sw', '')
         while sw.startswith('62'):
@@ -719,8 +746,6 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
             modem._log_apdu('msg', f'READ RECORD #{i} ({record_len} bytes)')
             r = modem.csim_read_record(i, record_len, lchan=lchan)
             log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
-            if r.get('apple_reset'):
-                return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
             sw = r.get('sw', '')
             if sw.startswith('90'):
                 records.append(r.get('data', ''))
@@ -740,8 +765,6 @@ def _read_file_csim(path: str, fid_hex: str, structure: str) -> 'Response':
         modem._log_apdu('msg', f'READ BINARY ({read_len} bytes)')
         r = modem.csim_read_binary(read_len, lchan=lchan)
         log_lines.append({'cmd': modem.last_cmd, 'resp': modem.last_resp.strip()})
-        if r.get('apple_reset'):
-            return jsonify({'success': False, 'error': 'APPLE_RESET', 'log': log_lines})
         sw = r.get('sw', '')
         data = r.get('data', '')
         if not sw.startswith('90') and not data:
@@ -1044,8 +1067,6 @@ def _select_file_chain(path: str, lchan: int = 0) -> dict:
         apdu = f'{cla:02X}A40804{lc:02X}{fid_path}'
         r = modem.csim_send(apdu)
         sw = r.get('sw', '')
-        if r.get('apple_reset'):
-            return {'success': False, 'error': 'APPLE_RESET'}
         if sw.startswith('90') or sw.startswith('61') or sw.startswith('9F'):
             return {'success': True, 'fcp': r.get('data', ''), 'sw': sw}
         return {'success': False, 'error': f'SELECT path {fid_path} failed: SW={sw}', 'sw': sw}
@@ -1073,8 +1094,6 @@ def _select_file_chain(path: str, lchan: int = 0) -> dict:
         apdu = f'{cla:02X}A40804{lc:02X}{fid_path}'
         r = modem.csim_send(apdu)
         sw = r.get('sw', '')
-        if r.get('apple_reset'):
-            return {'success': False, 'error': 'APPLE_RESET'}
         if sw.startswith('90') or sw.startswith('61') or sw.startswith('9F'):
             return {'success': True, 'fcp': r.get('data', ''), 'sw': sw}
         return {'success': False, 'error': f'SELECT path {fid_path} failed: SW={sw}', 'sw': sw}

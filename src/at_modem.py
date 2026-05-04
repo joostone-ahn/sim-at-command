@@ -22,8 +22,7 @@ class ATModem:
         self.last_resp = ''
         self.apdu_log: list[dict] = []  # [{dir:'tx'/'rx', data:'hex', sw:'', ts:float}]
         self.apdu_log_max = 500
-        self.is_apple = False  # Apple modem: auto CFUN reset on CSIM ERROR
-        self._cfun_retrying = False  # Guard against recursive CFUN retry
+        self.is_apple = False  # Apple modem flag
 
     def connect(self, port: str = None) -> dict:
         """Connect to serial port and verify AT response."""
@@ -111,46 +110,14 @@ class ATModem:
                 break
             time.sleep(0.5)
 
-    def cfun_reset_apple(self):
-        """AT+CFUN power cycle for Apple modem.
-        CFUN=1 may return ERROR — polls AT until 'System is ready for GTI commands' appears (max 30s)."""
-        logger.info("[INIT] Apple modem reset (AT+CFUN 0/1)")
-        self._send('AT+CFUN=0', timeout=5)
-        resp = self._send('AT+CFUN=1', timeout=5)
-        if 'ERROR' in resp:
-            logger.info("[INIT] CFUN=1 returned ERROR — waiting for GTI ready")
-        # Poll AT every 0.5s, break when modem sends "System is ready for GTI commands"
-        for i in range(60):
-            time.sleep(0.5)
-            resp = self._send('AT')
-            if 'GTI' in resp:
-                logger.info("[INIT] Apple modem ready (GTI) after %d polls", i + 1)
-                return
-        logger.warning("[INIT] Apple modem GTI ready not received (timeout 30s)")
-
     def csim_send(self, apdu_hex: str) -> dict:
-        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE).
-        For Apple modem: auto CFUN reset on ERROR, returns with cfun_reset=True flag."""
+        """AT+CSIM — send raw APDU. Auto-handles SW 61xx (GET RESPONSE)."""
         length = len(apdu_hex)
         cmd = f'AT+CSIM={length},"{apdu_hex}"'
         self._log_apdu('tx', apdu_hex)
         resp = self._send(cmd)
         result = self._parse_csim(resp)
         sw = result.get('sw', '')
-
-        # Apple modem: CFUN reset on CSIM ERROR, return error to caller
-        if not sw and result.get('error') and self.is_apple and not self._cfun_retrying:
-            logger.warning("[CSIM] ERROR on Apple modem — performing CFUN reset")
-            self._log_apdu('msg', '⚠️ CSIM ERROR — CFUN reset & retry')
-            self._cfun_retrying = True
-            try:
-                self.cfun_reset_apple()
-            finally:
-                self._cfun_retrying = False
-            self._log_apdu('msg', '✅ Modem recovered')
-            result['apple_reset'] = True
-            result['error'] = 'APPLE_RESET'
-            return result
 
         # Auto GET RESPONSE for SW 61xx
         if sw.startswith('61'):
@@ -181,19 +148,16 @@ class ATModem:
         result = {'csim_ok': False}
         usim_prefix = 'A0000000871002'
         isim_prefix = 'A0000000871004'
-        fail_count = 0
         for ch in range(20):
             cla = _cla_for_lchan(ch, proprietary=True)
             r = self.csim_send(f'{cla:02X}F2000000')
             sw = r.get('sw', '')
             data = r.get('data', '')
             if not (sw.startswith('90') or sw.startswith('61')) or not data:
-                fail_count += 1
-                # 6E00 = class not supported → extended channels not available
-                if ch > 3 and (fail_count >= 2 or sw == '6E00'):
+                # 6E00 = class not supported → stop scanning
+                if sw == '6E00':
                     break
                 continue
-            fail_count = 0
             result['csim_ok'] = True
             aid = _extract_aid_from_fcp(data)
             if aid:
@@ -211,10 +175,9 @@ class ATModem:
                     logger.info("[SCAN] Channel 0: USIM (no AID, assumed)")
             if 'usim' in result and 'isim' in result:
                 break
-        # Fallback: if no USIM found, default to channel 0
+        # Fallback: if no USIM found, fail
         if 'usim' not in result:
-            result['usim'] = {'lchan': 0, 'aid': ''}
-            logger.info("[SCAN] Defaulting USIM to channel 0")
+            return result
         return result
 
     def csim_read_binary(self, length: int, lchan: int = 0) -> dict:
