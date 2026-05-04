@@ -1080,8 +1080,9 @@ async function tlvWrite(){
     if(!data.startsWith(tagHex)){document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Hex data must start with tag ${tagHex}</span>`;return;}
     var i=tagHex.length;var lenByte=parseInt(data.substr(i,2),16);i+=2;var expectedLen=0;if(lenByte<=0x7F){expectedLen=lenByte;}else if(lenByte===0x81){expectedLen=parseInt(data.substr(i,2),16);i+=2;}else if(lenByte===0x82){expectedLen=parseInt(data.substr(i,4),16);i+=4;}var actualLen=(data.length-i)/2;
     if(actualLen!==expectedLen){document.getElementById('writeTlvStatus').innerHTML=`<span style="color:#e74c3c">Length mismatch: expected ${expectedLen} bytes, got ${actualLen} bytes</span>`;return;}
+    var valueOnly=data.substr(i);
     document.getElementById('writeTlvStatus').innerHTML='<span style="color:#888">⏳ Writing...</span>';document.getElementById('writeTlvWriteBtn').disabled=true;
-    const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:data});
+    const wr=await api('/write_tlv',{path:selectedFile.path,tag:tag,data:valueOnly});
     await pollApduLog();
     if(wr.success){apduLogMsg('✅ SET DATA OK');document.getElementById('writeTlvStatus').innerHTML='<span class="status-badge status-ok">✅ Done</span>';tlvTagData[tag]=data;tlvOrigHex=data.toUpperCase();document.getElementById('writeTlvWriteBtn').disabled=true;document.getElementById('writeTlvRestoreBtn').disabled=true;
         delete readCache[selectedFile.path];await new Promise(r=>setTimeout(r,1000));const rr=await api('/read',{path:selectedFile.path,fid:selectedFile.fid,structure:selectedFile.structure});await pollApduLog();if(rr.success){readCache[selectedFile.path]=rr;showFileData(selectedFile,rr);apduLogMsg('✅ Re-read OK');}

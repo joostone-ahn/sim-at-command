@@ -93,17 +93,12 @@ def _decode_ber_tlv(path: str, hex_data: str) -> dict | None:
     if not hex_data:
         return None
     try:
+        tag_hex = hex_data[:2].upper()
         value_hex = _strip_tlv(hex_data)
-
-        # If inner value also starts with a TLV of same tag, strip again
-        inner = _strip_tlv(value_hex)
-        if inner and inner != value_hex:
-            value_hex = inner
 
         # Try EF-specific decode_tag_data (e.g. EF_URSP)
         ef = _find_ef(path)
         if ef and hasattr(ef, 'decode_tag_data'):
-            tag_hex = hex_data[:2].upper()
             result = ef.decode_tag_data(tag_hex, value_hex)
             return _json_safe(result)
 

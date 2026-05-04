@@ -663,6 +663,7 @@ def write_tlv():
 
     if data:
         modem._log_apdu('msg', 'SET DATA (tag=0x' + tag_hex + ')')
+        # data is value-only; build TLV = tag + BER-length + value
         val_len = len(data) // 2
         if val_len <= 0x7F:
             ber_len = f'{val_len:02X}'
@@ -1021,6 +1022,7 @@ def _write_tlv_ccho(path: str, tag_hex: str, data: str) -> 'Response':
         # SET DATA
         if data:
             modem._log_apdu('msg', 'SET DATA (tag=0x' + tag_hex + ')')
+            # data is value-only; build TLV = tag + BER-length + value
             val_len = len(data) // 2
             if val_len <= 0x7F:
                 ber_len = f'{val_len:02X}'
