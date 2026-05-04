@@ -121,15 +121,28 @@ def apple_reset():
         return jsonify({'success': False, 'error': 'Modem not connected'})
     modem._send('AT+CFUN=0', timeout=3)
     modem._send('AT+CFUN=1', timeout=2)
-    # Poll AT every 1s, wait for 'System is ready for GTI commands'
+    # Wait 5s for modem to start rebooting
+    logger.info("[INIT] Apple CFUN cycle done — waiting 5s")
+    time.sleep(5)
+    # Poll AT every 1s (timeout=1): 3 consecutive OK or GTI → success
+    ok_count = 0
     for i in range(30):
         time.sleep(1)
-        resp = modem._send('AT')
+        resp = modem._send('AT', timeout=1)
         if 'GTI' in resp:
             logger.info("[INIT] Apple modem ready (GTI) after %d polls", i + 1)
             time.sleep(3)
             return jsonify({'success': True, 'polls': i + 1})
-    return jsonify({'success': False, 'error': 'GTI ready timeout (30s)'})
+        if 'OK' in resp:
+            ok_count += 1
+            if ok_count >= 3:
+                logger.info("[INIT] Apple modem ready (3x OK) after %d polls", i + 1)
+                time.sleep(3)
+                return jsonify({'success': True, 'polls': i + 1})
+        else:
+            logger.info("[INIT] Apple poll %d: no response", i + 1)
+            ok_count = 0
+    return jsonify({'success': False, 'error': 'Modem recovery timeout (35s)'})
 
 
 @app.route('/at_check', methods=['POST'])
@@ -385,7 +398,8 @@ def _enrich_expanded_arr(meta: dict):
 @app.route('/files', methods=['GET'])
 def get_files():
     """Return 3GPP standard SIM file tree."""
-    tree = build_file_tree()
+    basic = request.args.get('basic', '').lower() in ('1', 'true', 'yes')
+    tree = build_file_tree(basic=basic)
     return jsonify({'files': tree, 'isim_aid': isim_aid})
 
 

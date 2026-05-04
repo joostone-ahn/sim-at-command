@@ -85,6 +85,7 @@ On connect, the tool automatically:
 
 The **SIM Files** panel shows EFs from 3GPP TS 31.102 (USIM), TS 31.103 (ISIM), and TS 102.221 (MF).
 
+- **Basic / All** toggle switches between a curated subset of commonly used EFs and the extended file list
 - Click any EF to read
 - Use **Search** to filter by FID or name
 - Each file has a status dot indicating read state:
@@ -147,7 +148,7 @@ Click **Write** to open the editor popup:
 - **NOTE3:** ISIM files are accessed by setting the CLA byte to the scanned ISIM logical channel number (e.g. CLA=01 for channel 1) in AT+CSIM APDUs. No separate session management is needed.
 - **NOTE4:** When logical channel scan is not supported, the tool falls back to AT+CCHO (3GPP TS 27.007 Section 8.45) to open a session by ISIM AID, then sends APDUs via AT+CGLA (Section 8.46) on that session. The modem manages channel assignment internally.
 - **NOTE5:** Qualcomm modem processes AT+CSIM through MMGSDI/CRSM internally, which may block RETRIEVE DATA (INS=CB) with SW=6981 (command incompatible with file structure). The tool performs an AT+CFUN power cycle to reset the modem internal state before proceeding, which has been verified to resolve the issue.
-- **NOTE6:** AT+CSIM may occasionally return ERROR. The tool automatically recovers via AT+CFUN power cycle and re-runs the initialization procedure (channel scan, EF.ARR, IMSI/MSISDN).
+- **NOTE6:** AT+CSIM may occasionally return ERROR, causing channel 0 (USIM) to become unresponsive. When USIM is not found during channel scan, the tool performs an AT+CFUN power cycle and polls AT until the modem recovers, then re-runs the initialization procedure.
 
 ---
 

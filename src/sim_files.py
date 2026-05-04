@@ -169,7 +169,32 @@ SIM_FILES = [
 ]
 
 
-def build_file_tree() -> list[dict]:
+# Basic mode: subset of commonly used EFs (safe for all chipsets including Apple)
+BASIC_PATHS = {
+    # MF
+    'MF/EF.DIR', 'MF/EF.PL', 'MF/EF.ARR', 'MF/EF.ICCID',
+    # ADF.USIM
+    'ADF.USIM/EF.ARR', 'ADF.USIM/EF.IMSI', 'ADF.USIM/EF.Keys', 'ADF.USIM/EF.KeysPS',
+    'ADF.USIM/EF.HPPLMN', 'ADF.USIM/EF.UST', 'ADF.USIM/EF.EST', 'ADF.USIM/EF.ACC',
+    'ADF.USIM/EF.MSISDN', 'ADF.USIM/EF.SPN',
+    'ADF.USIM/EF.FPLMN', 'ADF.USIM/EF.EHPLMN', 'ADF.USIM/EF.EHPLMNPI',
+    'ADF.USIM/EF.PLMNwAcT', 'ADF.USIM/EF.OPLMNwAcT', 'ADF.USIM/EF.HPLMNwAcT',
+    'ADF.USIM/EF.LOCI', 'ADF.USIM/EF.PSLOCI',
+    'ADF.USIM/EF.SMSP', 'ADF.USIM/EF.SMSS',
+    'ADF.USIM/EF.CBMID', 'ADF.USIM/EF.CBMIR',
+    'ADF.USIM/EF.ECC', 'ADF.USIM/EF.OPL',
+    'ADF.USIM/EF.START-HFN', 'ADF.USIM/EF.THRESHOLD',
+    # ADF.USIM / DF.5GS
+    'ADF.USIM/DF.5GS',
+    'ADF.USIM/DF.5GS/EF.UAC_AIC', 'ADF.USIM/DF.5GS/EF.Routing_Indicator',
+    'ADF.USIM/DF.5GS/EF.URSP',
+    # ADF.ISIM
+    'ADF.ISIM/EF.IMPI', 'ADF.ISIM/EF.DOMAIN', 'ADF.ISIM/EF.IMPU',
+    'ADF.ISIM/EF.ARR', 'ADF.ISIM/EF.IST', 'ADF.ISIM/EF.P-CSCF',
+}
+
+
+def build_file_tree(basic=False) -> list[dict]:
     """Convert SIM_FILES into a flat tree structure.
     Each node: {name, fid, type, structure, path}"""
     tree = []
@@ -187,6 +212,8 @@ def build_file_tree() -> list[dict]:
             continue
         files = groups[group_name]
         for f in files:
+            if basic and f['path'] not in BASIC_PATHS:
+                continue
             tree.append({
                 'path': f['path'],
                 'name': f['name'],

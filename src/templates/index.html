@@ -138,9 +138,12 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             <div class="panel-title" style="min-height:36px;padding:6px 12px">
                 <span>🗂️ SIM Files</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-                    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:5px;padding:2px 8px;height:24px;width:160px">
-                        <span style="font-size:0.66rem;font-weight:600;color:rgba(255,255,255,0.9);white-space:nowrap;min-width:42px">Search</span>
-                        <input type="text" id="searchInput" oninput="filterTree();toggleSearchClear()" placeholder="FID or Name" style="border:none;background:transparent;color:white;font-size:0.66rem;font-family:var(--mono);flex:1;min-width:0;outline:none" class="search-ph">
+                    <div class="toggle-switch" style="flex-shrink:0">
+                        <span class="toggle-label toggle-active" id="toggle-basic" onclick="switchFileMode('basic')" style="width:42px">Basic</span>
+                        <span class="toggle-label" id="toggle-full" onclick="switchFileMode('full')" style="width:42px">All</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:5px;padding:1px 8px;height:20px;width:120px">
+                        <input type="text" id="searchInput" oninput="filterTree();toggleSearchClear()" placeholder="Search..." style="border:none;background:transparent;color:white;font-size:0.66rem;font-family:var(--mono);flex:1;min-width:0;outline:none;padding-left:4px" class="search-ph">
                         <span id="searchClear" onclick="clearSearch()" style="display:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;font-weight:700;flex-shrink:0">✕</span>
                     </div>
                 </div>
@@ -708,7 +711,14 @@ async function loadArrData(){
 }
 
 /* === File Tree === */
-async function loadFileTree(){const r=await api('/files');if(!r.files)return;allFiles=r.files;if(r.isim_aid)hasIsim=true;renderTree(allFiles);}
+let _fileMode='basic';
+function switchFileMode(mode){
+    _fileMode=mode;
+    document.getElementById('toggle-basic').classList.toggle('toggle-active',mode==='basic');
+    document.getElementById('toggle-full').classList.toggle('toggle-active',mode==='full');
+    loadFileTree();
+}
+async function loadFileTree(){const r=await api('/files?basic='+(_fileMode==='basic'?'1':'0'));if(!r.files)return;allFiles=r.files;if(r.isim_aid)hasIsim=true;renderTree(allFiles);}
 function renderTree(files){
     const c=document.getElementById('fileTree');c.innerHTML='';const q=(document.getElementById('searchInput').value||'').toUpperCase();
     const groups={};files.forEach(f=>{const g=f.path.split('/')[0];if(!groups[g])groups[g]=[];groups[g].push(f);});
