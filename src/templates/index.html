@@ -94,8 +94,6 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
             <button class="btn btn-dark" onclick="refreshPorts()" title="Refresh ports" style="height:22px;width:22px;padding:0;font-size:0.72rem;line-height:22px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">🔄</button>
             <div style="width:1px;background:#ddd;height:16px;flex-shrink:0"></div>
             <button class="btn btn-primary" id="btnConnect" onclick="doConnect()" style="height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">🔌 Connect</button>
-            <button class="btn btn-danger" id="btnDisconnect" onclick="doDisconnect()" style="display:none;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box">⏏ Disconnect</button>
-            <button class="btn" id="btnCfunReset" onclick="doCfunReset()" style="display:none;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box;background:#f0ad4e;color:#fff;border:1px solid #eea236;border-radius:5px">⚡ SIM Reset</button>
         </div>
         <span id="connectStatus" class="status-badge" style="display:none"></span>
         <div id="simInfoArea" style="display:none;align-items:center;gap:10px">
@@ -121,6 +119,10 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
                     <span><span id="admDot3" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM3</span>
                     <span><span id="admDot4" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:3px;vertical-align:middle"></span>ADM4</span>
                 </div>
+            </div>
+            <div style="width:1px;background:#ddd;height:22px;flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:6px;padding:0 12px;height:34px;box-sizing:border-box">
+                <button class="btn" id="btnCfunReset" onclick="doCfunReset()" style="white-space:nowrap;height:22px;padding:0 8px;font-size:0.68rem;line-height:22px;box-sizing:border-box;background:#f0ad4e;color:#fff;border:1px solid #eea236;border-radius:5px">⚡ SIM Reset</button>
             </div>
         </div>
     </div>
@@ -511,7 +513,7 @@ var _portLostHandled=false;
 function _resetConnectionUI(){
     setBadge('connectStatus','','');
     document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';
-    document.getElementById('btnDisconnect').style.display='none';document.getElementById('btnCfunReset').style.display='none';document.getElementById('portSelect').disabled=false;
+    document.getElementById('portSelect').disabled=false;
     document.getElementById('admArea').style.display='none';
     document.getElementById('simInfoArea').style.display='none';
     document.getElementById('simImsi').textContent='';
@@ -543,7 +545,7 @@ async function _onPortLost(){
     _portLostHandled=false;
 }
 async function refreshPorts(){
-    if(document.getElementById('btnDisconnect').style.display!=='none'){await doDisconnect();}
+    if(document.getElementById('btnConnect').disabled){await doDisconnect();}
     const r=await api('/ports');const sel=document.getElementById('portSelect');
     sel.innerHTML='<option value="">Select a port...</option>';
     window._portList=r.ports||[];
@@ -642,7 +644,7 @@ async function doPostConnect(isIphone){
     // Cache EF.DIR if read during fallback
     if(at.dir&&at.dir.records&&at.dir.records.length){readCache['MF/EF.DIR']={success:true,structure:'linear_fixed',data:at.dir.records,meta:at.dir.meta||{},record_len:(at.dir.meta||{}).record_len||0,num_records:at.dir.records.length};}
     apduLogMsg('✅ Connected');
-    document.getElementById('btnConnect').style.display='none';document.getElementById('btnDisconnect').style.display='';document.getElementById('btnCfunReset').style.display='';document.getElementById('portSelect').disabled=true;
+    document.getElementById('btnConnect').textContent='⚡ Connected';document.getElementById('btnConnect').disabled=true;document.getElementById('portSelect').disabled=true;
     document.getElementById('admArea').style.display='flex';
     await api('/apdu_log_clear',{});_apduLogIdx=0;
     startApduPoll();
