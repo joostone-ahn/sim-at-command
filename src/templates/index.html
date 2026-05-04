@@ -255,6 +255,19 @@ select.input-sm{cursor:pointer;font-family:'Segoe UI',sans-serif}
 </div>
 </div>
 
+<!-- Port Lost Popup -->
+<div id="portLostOverlay" class="overlay">
+<div class="popup" style="width:380px;text-align:center;padding:0">
+    <div class="panel-title" style="border-radius:12px 12px 0 0;justify-content:center">
+        <span>⚠️ Connection Lost</span>
+    </div>
+    <div style="padding:24px 20px 20px">
+        <div style="font-size:0.84rem;color:#333;margin-bottom:16px;line-height:1.6">USB device disconnected.<br>Please reconnect and try again.</div>
+        <button class="btn btn-primary" onclick="document.getElementById('portLostOverlay').classList.remove('show')" style="padding:6px 24px;font-size:0.78rem">OK</button>
+    </div>
+</div>
+</div>
+
 <!-- Write Popup -->
 <div id="writeOverlay" class="overlay" onclick="if(event.target===this)closeWritePopup()">
 <div class="popup" style="width:640px;max-height:70vh;display:flex;flex-direction:column;min-width:400px">
@@ -353,7 +366,7 @@ function isServiceTableFile(path){return path&&(path.endsWith('/EF.UST')||path.e
 function isUrspFile(path){return path&&path.indexOf('EF.URSP')>=0;}
 
 /* === API Helper === */
-async function api(u,b){try{const o=b!==undefined?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{method:'GET'};return await(await fetch(u,o)).json();}catch(e){return{success:false,error:e.message};}}
+async function api(u,b){try{const o=b!==undefined?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{method:'GET'};const r=await(await fetch(u,o)).json();if(r.disconnected){await _onPortLost();return r;}return r;}catch(e){return{success:false,error:e.message};}}
 
 /* === UI Helpers === */
 function setStep(n){currentStep=n;}
@@ -494,22 +507,55 @@ function resetDetailButtons(){
 
 <script>
 /* === Connect / Disconnect === */
+var _portLostHandled=false;
+function _resetConnectionUI(){
+    setBadge('connectStatus','','');
+    document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';
+    document.getElementById('btnDisconnect').style.display='none';document.getElementById('btnCfunReset').style.display='none';document.getElementById('portSelect').disabled=false;
+    document.getElementById('admArea').style.display='none';
+    document.getElementById('simInfoArea').style.display='none';
+    document.getElementById('simImsi').textContent='';
+    document.getElementById('simMsisdn').textContent='';
+    stopApduPoll();
+}
+async function _resetData(){
+    admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
+    arrData={};hasIsim=false;hasUsim=false;
+    for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
+    document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
+    document.getElementById('detailFileName').textContent='';
+    resetDetailButtons();
+    readCache={};selectedFile=null;allFiles=[];
+    document.getElementById('fileTree').innerHTML='';
+    document.getElementById('searchInput').value='';
+    setStep(1);
+    await api('/apdu_log_clear',{});_apduLogIdx=0;clearApduLog();
+}
+async function _onPortLost(){
+    if(_portLostHandled)return;
+    _portLostHandled=true;
+    stopApduPoll();
+    await pollApduLog();
+    apduLogMsg('❌ Serial port lost — disconnected');
+    _resetConnectionUI();
+    await refreshPorts();
+    document.getElementById('portLostOverlay').classList.add('show');
+    _portLostHandled=false;
+}
 async function refreshPorts(){
+    if(document.getElementById('btnDisconnect').style.display!=='none'){await doDisconnect();}
     const r=await api('/ports');const sel=document.getElementById('portSelect');
     sel.innerHTML='<option value="">Select a port...</option>';
     window._portList=r.ports||[];
     if(r.ports&&r.ports.length){
-        // Sort: modem ports first
         r.ports.sort((a,b)=>{const aM=(a.device+' '+a.description).toLowerCase().includes('modem')?0:1;const bM=(b.device+' '+b.description).toLowerCase().includes('modem')?0:1;return aM-bM;});
         const models=r.adb_models||{};
         r.ports.forEach(p=>{const o=document.createElement('option');o.value=p.device;
             let label=`${p.device}  (${p.description})`;
-            // Match ADB model by serial_number or device path containing serial
             var matched='';
             for(var sn in models){if(p.serial_number===sn||p.device.indexOf(sn)>=0){matched=models[sn];break;}}
             if(matched)label+=`  [${matched}]`;
             o.textContent=label;sel.appendChild(o);});
-        // Auto-select: prefer modem port
         const auto=r.ports.find(p=>(p.description+' '+p.device).toLowerCase().includes('modem'))||r.ports[0];
         if(auto)sel.value=auto.device;
     }
@@ -519,11 +565,12 @@ async function doConnect(){
     if(!port){apduLogMsg('⚠️ Please select a port');return;}
     var btn=document.getElementById('btnConnect');
     btn.disabled=true;btn.textContent='Connecting...';
-    apduLogMsg('Connecting to '+port+'...');
     var selPort=(window._portList||[]).find(function(p){return p.device===port;});
     var isIphone=selPort&&selPort.description&&selPort.description.toLowerCase().indexOf('iphone')>=0;
     const r=await api('/connect',{port, is_apple: isIphone});
     if(!r.success){apduLogMsg('❌ '+r.error);btn.disabled=false;btn.textContent='🔌 Connect';return;}
+    await _resetData();
+    apduLogMsg('Connecting to '+port+'...');
     await doPostConnect(isIphone);
 }
 async function doPostConnect(isIphone){
@@ -602,40 +649,15 @@ async function doPostConnect(isIphone){
     setStep(2);loadFileTree();
 }
 async function doDisconnect(){
-    await api('/disconnect',{});setBadge('connectStatus','','');
-    document.getElementById('btnConnect').style.display='';document.getElementById('btnConnect').disabled=false;document.getElementById('btnConnect').textContent='🔌 Connect';document.getElementById('btnDisconnect').style.display='none';document.getElementById('btnCfunReset').style.display='none';document.getElementById('portSelect').disabled=false;
-    admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
-    arrData={};hasIsim=false;hasUsim=false;
-    document.getElementById('admArea').style.display='none';
-    document.getElementById('simInfoArea').style.display='none';
-    /* ICCID disabled for now
-    document.getElementById('simIccid').textContent='';
-    */
-    document.getElementById('simImsi').textContent='';
-    document.getElementById('simMsisdn').textContent='';
-    for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
-    document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
-    document.getElementById('detailFileName').textContent='';
-    resetDetailButtons();
-    readCache={};selectedFile=null;allFiles=[];
-    document.getElementById('fileTree').innerHTML='';
-    document.getElementById('searchInput').value='';
-    setStep(1);stopApduPoll();clearApduLog();
+    await api('/disconnect',{});
+    _resetConnectionUI();
+    await _resetData();
 }
 async function doCfunReset(){
     var btn=document.getElementById('btnCfunReset');
     btn.disabled=true;btn.textContent='Resetting...';
-    // Clear UI and APDU log immediately
-    await api('/apdu_log_clear',{});_apduLogIdx=0;clearApduLog();
+    await _resetData();
     apduLogMsg('⚡ SIM Reset (AT+CFUN=0/1)...');
-    readCache={};selectedFile=null;allFiles=[];arrData={};
-    admVerified={ADM1:false,ADM2:false,ADM3:false,ADM4:false};admKeys={ADM1:'',ADM2:'',ADM3:'',ADM4:''};
-    for(var d=1;d<=4;d++)document.getElementById('admDot'+d).style.background='#ccc';
-    document.getElementById('fileTree').innerHTML='';
-    document.getElementById('searchInput').value='';
-    document.getElementById('detailContent').style.display='none';document.getElementById('detailEmpty').style.display='flex';
-    document.getElementById('detailFileName').textContent='';
-    resetDetailButtons();
     // Send CFUN 0/1 via raw AT commands (no scan — doPostConnect handles it)
     await api('/at_raw',{cmd:'AT+CFUN=0'});
     await new Promise(r=>setTimeout(r,1000));

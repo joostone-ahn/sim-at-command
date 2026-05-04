@@ -5,8 +5,15 @@ import json
 import sys
 import logging
 import platform
+import functools
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
+import serial
+try:
+    import termios
+    _termios_error = termios.error
+except ImportError:
+    _termios_error = None
 
 sys.path.insert(0, str(Path(__file__).parent))
 from at_modem import ATModem, parse_fcp, _cla_for_lchan
@@ -24,6 +31,29 @@ usim_lchan = 0    # Logical channel for USIM (from STATUS scan)
 isim_lchan = -1   # Logical channel for ISIM (-1 = not available via scan)
 isim_ccho = False  # True if ISIM uses AT+CCHO/CGLA fallback
 adm_keys = {}     # Verified ADM keys: {'ADM1': 'hex', ...} — cleared on disconnect
+
+
+def _serial_safe(f):
+    """Decorator: catch serial port errors, auto-disconnect, return disconnected flag."""
+    _exc = [serial.SerialException, OSError]
+    if _termios_error:
+        _exc.append(_termios_error)
+    _exc = tuple(_exc)
+
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except _exc as e:
+            logger.error("[SERIAL] Port error in %s: %s", f.__name__, e)
+            # Force disconnect
+            modem.disconnect()
+            return jsonify({
+                'success': False,
+                'error': f'Serial port lost: {e}',
+                'disconnected': True,
+            })
+    return wrapper
 
 
 @app.route('/')
@@ -85,6 +115,7 @@ def disconnect():
 
 
 @app.route('/at_check', methods=['POST'])
+@_serial_safe
 def at_check():
     """Verify AT, scan channels, discover AIDs, CCHO fallback if needed."""
     global usim_aid, isim_aid, usim_lchan, isim_lchan, isim_ccho
@@ -142,6 +173,7 @@ def at_check():
 
 
 @app.route('/cfun_reset', methods=['POST'])
+@_serial_safe
 def cfun_reset():
     """AT+CFUN power cycle and re-scan channels."""
     global usim_aid, isim_aid, usim_lchan, isim_lchan
@@ -165,6 +197,7 @@ def cfun_reset():
 
 
 @app.route('/read_info', methods=['POST'])
+@_serial_safe
 def read_info():
     """Read ICCID, IMSI and MSISDN for header display."""
     if not modem.is_connected:
@@ -328,6 +361,7 @@ def get_files():
 
 
 @app.route('/read', methods=['POST'])
+@_serial_safe
 def read_file():
     """Read EF file via AT+CSIM — SELECT by AID + FID chain, then READ."""
     if not modem.is_connected:
@@ -344,6 +378,7 @@ def read_file():
 
 
 @app.route('/write', methods=['POST'])
+@_serial_safe
 def write_file():
     """Write to EF file via AT+CSIM or AT+CCHO/CGLA for ISIM fallback."""
     if not modem.is_connected:
@@ -410,6 +445,7 @@ def write_file():
 
 
 @app.route('/verify_adm', methods=['POST'])
+@_serial_safe
 def verify_adm():
     """ADM verification — supports ADM1~4."""
     if not modem.is_connected:
@@ -453,6 +489,7 @@ def service_map():
 
 
 @app.route('/read_arr', methods=['POST'])
+@_serial_safe
 def read_arr():
     """Read EF.ARR files via AT+CSIM and decode records for access rule display.
     Reads MF, USIM, and ISIM ARR separately (each ADF may have different rules)."""
@@ -548,6 +585,7 @@ def read_arr():
 
 
 @app.route('/write_tlv', methods=['POST'])
+@_serial_safe
 def write_tlv():
     """BER-TLV write: SELECT chain + DELETE DATA + SET DATA via AT+CSIM or CCHO."""
     if not modem.is_connected:
@@ -1056,6 +1094,7 @@ def _name_to_fid(name: str) -> str:
 
 
 @app.route('/at_raw', methods=['POST'])
+@_serial_safe
 def at_raw():
     """Send raw AT command."""
     if not modem.is_connected:
@@ -1090,6 +1129,7 @@ def apdu_log_clear():
 
 
 @app.route('/apdu_send', methods=['POST'])
+@_serial_safe
 def apdu_send():
     """Send raw APDU hex via AT+CSIM and return result."""
     if not modem.is_connected:
