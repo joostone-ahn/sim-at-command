@@ -169,7 +169,7 @@ class ATModem:
             self._log_apdu('rx', result2.get('data', ''), result2.get('sw', ''))
             return result2
         if not sw and result.get('error'):
-            self._log_apdu('rx', result.get('error', ''), '')
+            self._log_apdu('msg', '❌ ' + result.get('error', ''))
         else:
             self._log_apdu('rx', result.get('data', ''), sw)
         return result
